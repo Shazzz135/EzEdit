@@ -1,0 +1,77 @@
+name: CI Quality Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Lint, Typecheck, Test & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check file lengths (<= 250 lines)
+        run: |
+          python3 -c "
+          import os, sys
+          failed = False
+          for root, _, files in os.walk('src'):
+              for file in files:
+                  if file.endswith(('.ts', '.tsx', '.js', '.jsx', '.css')):
+                      p = os.path.join(root, file)
+                      with open(p, 'r', encoding='utf-8', errors='ignore') as f:
+                          count = len(f.readlines())
+                          if count > 250:
+                              print(f'ERROR: {p} exceeds 250 lines: {count} lines')
+                              failed = True
+          if failed:
+              sys.exit(1)
+          print('File length check passed: all source files <= 250 lines.')
+          "
+
+      - name: Typecheck TypeScript
+        run: pnpm exec tsc --noEmit
+
+      - name: Run ESLint
+        run: pnpm lint
+
+      - name: Production Build
+        run: pnpm build
