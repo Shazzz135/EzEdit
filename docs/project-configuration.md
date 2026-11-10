@@ -18,7 +18,7 @@
 2. **Inpainting & Retouching**: Hybrid architecture: Local Poisson neighborhood blending & clone stamp for instant spot/blemish healing, plus Pollinations.ai generative inpainting for complex object removal and content-aware fill.
 3. **Tab & Memory Budget**: Strict **6-tab maximum** limit. A warning dialog triggers when attempting to open a 7th tab. Maximum import dimension is capped at **4096px** with an automatic downscale prompt to prevent GPU/browser memory exhaustion.
 4. **Ad Placements**:
-   - **Desktop (Far Right)**: Permanent Skyscraper container (`160x600`).
+   - **Desktop (Far Left)**: Permanent Skyscraper container (`160x600`), Editor (Middle, flex-1), Tools (Right, 320px).
    - **Mobile (Fixed Bottom)**: Permanent Standard Banner container (`320x50`).
    - Zero layout shift (CLS < 0.05).
 5. **Precision Sliders**: Step precision of `0.1` across all 13 adjustment sliders.
