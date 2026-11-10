@@ -32,12 +32,12 @@ EzEdit utilizes a **Precision Dark Theme** engineered for digital content creati
 ```text
 +---------------------------------------------------------------------------------------+
 | Header: Logo | Tabs (Max 6: Tab 1, Tab 2 +) | Undo | Redo | Zoom | Compare | Export   |
-+-------------------------------------------------------------+---------------+---------+
-|                                                             | Tools Panel   | Ad Slot |
-|                    Editor Canvas Window                     | (Categories & | 160x600 |
-|               (Interactive Image Viewport)                  |  Sliders 0.1) | Skyscra |
-|                                                             | (320px fixed) | per     |
-+-------------------------------------------------------------+---------------+---------+
++---------+-------------------------------------------------------------+---------------+
+| Ad Slot |                                                             | Tools Panel   |
+| 160x600 |                    Editor Canvas Window                     | (Categories & |
+| Skyscra |               (Interactive Image Viewport)                  |  Sliders 0.1) |
+| per     |                      (Middle / flex-1)                      | (320px fixed) |
++---------+-------------------------------------------------------------+---------------+
 ```
 
 ### Mobile (Viewport Width < 768px)

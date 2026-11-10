@@ -22,7 +22,12 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
 
       {/* 2. Main Workspace Partition */}
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        {/* A. Canvas Editor Viewport Area (Left on Desktop, Top on Mobile) */}
+        {/* A. Permanent Desktop Ad Space (All the way on the LEFT on Desktop: 160x600) */}
+        <div className="hidden md:flex flex-col items-center justify-start p-2 border-r border-[#242430] bg-[#101015] flex-shrink-0">
+          <PermanentAdSlot placement="desktop-skyscraper" />
+        </div>
+
+        {/* B. Canvas Editor Viewport Area (MIDDLE on Desktop, TOP on Mobile) */}
         <section
           aria-label="Photo Canvas Viewport"
           className="flex-1 relative bg-[#0B0B0E] overflow-hidden flex items-center justify-center min-h-[300px]"
@@ -43,7 +48,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
           )}
         </section>
 
-        {/* B. Tools Panel (Right 320px on Desktop, Bottom Carousel on Mobile) */}
+        {/* C. Tools Panel (RIGHT on Desktop: 320px fixed, BOTTOM Carousel on Mobile) */}
         <aside
           aria-label="Editor Tools"
           className="w-full md:w-[320px] md:min-w-[320px] md:max-w-[320px] h-[220px] md:h-full bg-[#16161C] border-t md:border-t-0 md:border-l border-[#242430] flex flex-col overflow-hidden flex-shrink-0 z-10"
@@ -54,14 +59,9 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
             </div>
           )}
         </aside>
-
-        {/* C. Permanent Desktop Ad Space (Fixed 160x600 Skyscraper on Far Right) */}
-        <div className="hidden md:flex flex-col items-center justify-start p-2 border-l border-[#242430] bg-[#101015] flex-shrink-0">
-          <PermanentAdSlot placement="desktop-skyscraper" />
-        </div>
       </main>
 
-      {/* 3. Permanent Mobile Ad Banner (Fixed Bottom 320x50) */}
+      {/* 3. Permanent Mobile Ad Banner (Fixed Bottom 320x50 on Mobile) */}
       <div className="flex md:hidden w-full flex-shrink-0 z-20">
         <PermanentAdSlot placement="mobile-banner" />
       </div>
