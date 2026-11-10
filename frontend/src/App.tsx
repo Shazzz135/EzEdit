@@ -1,120 +1,124 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import React, { useState } from 'react'
+import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
+import { PrecisionSlider } from '@/components/ui/PrecisionSlider'
+import { Button } from '@/components/ui/Button'
+import { Modal } from '@/components/ui/Modal'
+import {
+  Crop,
+  Sliders,
+  Wand2,
+  Brush,
+  Scissors,
+  Sparkles,
+} from 'lucide-react'
 
-function App() {
-  const [count, setCount] = useState(0)
+export const App: React.FC = () => {
+  const [activeCategory, setActiveCategory] = useState<
+    'orientation' | 'adjustments' | 'filters' | 'selection' | 'retouch' | 'ai'
+  >('adjustments')
+  const [testExposure, setTestExposure] = useState(0.0)
+  const [testContrast, setTestContrast] = useState(0.0)
+  const [isWarningOpen, setIsWarningOpen] = useState(false)
+
+  const toolCategories = [
+    { id: 'orientation', label: 'Orientation', icon: Crop },
+    { id: 'adjustments', label: 'Adjustments', icon: Sliders },
+    { id: 'filters', label: 'Filters', icon: Wand2 },
+    { id: 'selection', label: 'Selection', icon: Scissors },
+    { id: 'retouch', label: 'Retouch', icon: Brush },
+    { id: 'ai', label: 'AI Tools', icon: Sparkles },
+  ] as const
+
+  const toolsPanel = (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Category Tabs: Horizontal scroll on mobile, wrap or icons on desktop */}
+      <div className="flex items-center gap-1 p-2 border-b border-[#242430] overflow-x-auto no-scrollbar flex-shrink-0 bg-[#14141A]">
+        {toolCategories.map((cat) => {
+          const Icon = cat.icon
+          const isActive = activeCategory === cat.id
+          return (
+            <Button
+              key={cat.id}
+              size="sm"
+              isActive={isActive}
+              onClick={() => setActiveCategory(cat.id)}
+              className="text-xs whitespace-nowrap"
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{cat.label}</span>
+            </Button>
+          )
+        })}
+      </div>
+
+      {/* Category Content Pane */}
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+        {activeCategory === 'adjustments' && (
+          <div className="flex flex-col gap-3">
+            <h4 className="text-xs font-semibold text-[#A0A0B0] uppercase tracking-wider">
+              Light & Color
+            </h4>
+            <PrecisionSlider
+              label="Exposure"
+              value={testExposure}
+              onChange={setTestExposure}
+              min={-5.0}
+              max={5.0}
+              step={0.1}
+              defaultValue={0.0}
+              unit=" EV"
+            />
+            <PrecisionSlider
+              label="Contrast"
+              value={testContrast}
+              onChange={setTestContrast}
+              min={-100.0}
+              max={100.0}
+              step={0.1}
+              defaultValue={0.0}
+            />
+          </div>
+        )}
+
+        {activeCategory !== 'adjustments' && (
+          <div className="flex flex-col items-center justify-center p-6 text-center text-[#707080] text-xs">
+            <span>{activeCategory.toUpperCase()} tools ready for Milestone {activeCategory === 'orientation' ? 4 : activeCategory === 'filters' ? 5 : activeCategory === 'selection' ? 6 : activeCategory === 'retouch' ? 7 : 8}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      <WorkspaceShell
+        toolsContent={toolsPanel}
+        headerProps={{
+          onOpenAI: () => setIsWarningOpen(true),
+          onExport: () => alert('Export engine will activate in Milestone 8.'),
+        }}
+      />
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      <Modal
+        isOpen={isWarningOpen}
+        onClose={() => setIsWarningOpen(false)}
+        title="AI Enhancements"
+      >
+        <p className="text-xs text-[#A0A0B4] leading-relaxed">
+          Pollinations.ai integration allows keyless AI image generation and
+          manipulation directly in the browser. Full prompt controls will be
+          wired in Milestone 8.
+        </p>
+        <div className="mt-4 flex justify-end">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsWarningOpen(false)}
+          >
+            Got it
+          </Button>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      </Modal>
     </>
   )
 }
