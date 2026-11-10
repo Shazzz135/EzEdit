@@ -5,14 +5,14 @@ import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { PrecisionSlider } from '@/components/ui/PrecisionSlider'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { Dropdown } from '@/components/ui/Dropdown'
 import { Crop, Sliders, Wand2, Brush, Scissors, Sparkles, AlertTriangle } from 'lucide-react'
 import { MAX_TAB_LIMIT, MAX_IMPORT_DIMENSION } from '@/types/document'
 
-export const App: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState<
-    'orientation' | 'adjustments' | 'filters' | 'selection' | 'retouch' | 'ai'
-  >('adjustments')
+type ToolCategory = 'orientation' | 'adjustments' | 'filters' | 'selection' | 'retouch' | 'ai'
 
+export const App: React.FC = () => {
+  const [activeCategory, setActiveCategory] = useState<ToolCategory>('adjustments')
   const [tabLimitModalOpen, setTabLimitModalOpen] = useState(false)
   const [oversizedFile, setOversizedFile] = useState<{ file: File; width: number; height: number } | null>(null)
   const [unsavedDoc, setUnsavedDoc] = useState<{ id: string; name: string } | null>(null)
@@ -21,12 +21,12 @@ export const App: React.FC = () => {
   const activeDoc = getActiveDocument()
 
   const toolCategories = [
-    { id: 'orientation', label: 'Orientation', icon: Crop },
-    { id: 'adjustments', label: 'Adjustments', icon: Sliders },
-    { id: 'filters', label: 'Filters', icon: Wand2 },
-    { id: 'selection', label: 'Selection', icon: Scissors },
-    { id: 'retouch', label: 'Retouch', icon: Brush },
-    { id: 'ai', label: 'AI Tools', icon: Sparkles },
+    { id: 'orientation', label: 'Orientation & Alignment', icon: Crop },
+    { id: 'adjustments', label: 'Simple Adjustments', icon: Sliders },
+    { id: 'filters', label: 'Preset Filters', icon: Wand2 },
+    { id: 'selection', label: 'Precise Selection', icon: Scissors },
+    { id: 'retouch', label: 'Advanced Retouching', icon: Brush },
+    { id: 'ai', label: 'AI Tools (Pollinations.ai)', icon: Sparkles },
   ] as const
 
   const handleDownscaleAndImport = () => {
@@ -67,24 +67,17 @@ export const App: React.FC = () => {
 
   const toolsPanel = (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex items-center gap-1 p-2 border-b border-[#242430] overflow-x-auto no-scrollbar flex-shrink-0 bg-[#14141A]">
-        {toolCategories.map((cat) => {
-          const Icon = cat.icon
-          return (
-            <Button
-              key={cat.id}
-              size="sm"
-              isActive={activeCategory === cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className="text-xs whitespace-nowrap"
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{cat.label}</span>
-            </Button>
-          )
-        })}
+      {/* Category Dropdown Selector at Top of Tools Panel */}
+      <div className="p-2.5 border-b border-[#242430] bg-[#14141A] flex-shrink-0">
+        <Dropdown
+          label="Tool Category"
+          options={toolCategories}
+          selectedId={activeCategory}
+          onSelect={(id) => setActiveCategory(id as ToolCategory)}
+        />
       </div>
 
+      {/* Category Content Pane */}
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
         {activeDoc && activeCategory === 'adjustments' && (
           <div className="flex flex-col gap-3">
@@ -110,6 +103,15 @@ export const App: React.FC = () => {
               step={0.1}
               defaultValue={0.0}
             />
+          </div>
+        )}
+
+        {activeDoc && activeCategory !== 'adjustments' && (
+          <div className="flex flex-col items-center justify-center p-6 text-center text-[#707080] text-xs">
+            <span>
+              {toolCategories.find((c) => c.id === activeCategory)?.label} tools will activate in Milestone{' '}
+              {activeCategory === 'orientation' ? 4 : activeCategory === 'filters' ? 5 : activeCategory === 'selection' ? 6 : activeCategory === 'retouch' ? 7 : 8}
+            </span>
           </div>
         )}
 
