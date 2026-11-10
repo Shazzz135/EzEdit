@@ -1,0 +1,147 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { useDocumentStore } from '../useDocumentStore'
+import { MAX_TAB_LIMIT } from '@/types/document'
+
+describe('useDocumentStore Multi-Document Tab Manager', () => {
+  beforeEach(() => {
+    useDocumentStore.getState().clearAllDocuments()
+  })
+
+  it('starts with an empty document list and null active document', () => {
+    const { documents, activeDocumentId } = useDocumentStore.getState()
+    expect(documents).toHaveLength(0)
+    expect(activeDocumentId).toBeNull()
+  })
+
+  it('adds a document to the right and makes it active', () => {
+    const store = useDocumentStore.getState()
+    const res1 = store.addDocument({
+      name: 'photo1.jpg',
+      originalWidth: 1920,
+      originalHeight: 1080,
+      currentWidth: 1920,
+      currentHeight: 1080,
+      imageSrc: 'blob:test1',
+    })
+
+    expect(res1.success).toBe(true)
+    expect(useDocumentStore.getState().documents).toHaveLength(1)
+    expect(useDocumentStore.getState().activeDocumentId).toBe(res1.id)
+
+    const res2 = store.addDocument({
+      name: 'photo2.jpg',
+      originalWidth: 800,
+      originalHeight: 600,
+      currentWidth: 800,
+      currentHeight: 600,
+      imageSrc: 'blob:test2',
+    })
+
+    expect(res2.success).toBe(true)
+    const docs = useDocumentStore.getState().documents
+    expect(docs).toHaveLength(2)
+    // Verify appending to the right
+    expect(docs[0].name).toBe('photo1.jpg')
+    expect(docs[1].name).toBe('photo2.jpg')
+    expect(useDocumentStore.getState().activeDocumentId).toBe(res2.id)
+  })
+
+  it('strictly enforces the 6-tab maximum limit', () => {
+    const store = useDocumentStore.getState()
+    for (let i = 1; i <= MAX_TAB_LIMIT; i++) {
+      const res = store.addDocument({
+        name: `img_${i}.png`,
+        originalWidth: 100,
+        originalHeight: 100,
+        currentWidth: 100,
+        currentHeight: 100,
+        imageSrc: `blob:img_${i}`,
+      })
+      expect(res.success).toBe(true)
+    }
+
+    expect(useDocumentStore.getState().documents).toHaveLength(MAX_TAB_LIMIT)
+
+    // Attempting to add a 7th tab
+    const overflowRes = store.addDocument({
+      name: 'overflow.png',
+      originalWidth: 100,
+      originalHeight: 100,
+      currentWidth: 100,
+      currentHeight: 100,
+      imageSrc: 'blob:overflow',
+    })
+
+    expect(overflowRes.success).toBe(false)
+    expect(overflowRes.error).toBe('MAX_TABS_EXCEEDED')
+    expect(useDocumentStore.getState().documents).toHaveLength(MAX_TAB_LIMIT)
+  })
+
+  it('switches active document without mutating other document states', () => {
+    const store = useDocumentStore.getState()
+    const doc1 = store.addDocument({
+      name: 'doc1.png',
+      originalWidth: 100,
+      originalHeight: 100,
+      currentWidth: 100,
+      currentHeight: 100,
+      imageSrc: 'blob:doc1',
+    })
+    const doc2 = store.addDocument({
+      name: 'doc2.png',
+      originalWidth: 200,
+      originalHeight: 200,
+      currentWidth: 200,
+      currentHeight: 200,
+      imageSrc: 'blob:doc2',
+    })
+
+    // Modify doc2
+    store.updateAdjustments(doc2.id!, { exposure: 1.5 })
+
+    // Switch back to doc1
+    store.setActiveDocument(doc1.id!)
+    expect(useDocumentStore.getState().activeDocumentId).toBe(doc1.id)
+
+    const currentDoc1 = useDocumentStore.getState().getActiveDocument()
+    expect(currentDoc1?.adjustments.exposure).toBe(0.0)
+
+    // Switch to doc2 and verify its state is preserved
+    store.setActiveDocument(doc2.id!)
+    const currentDoc2 = useDocumentStore.getState().getActiveDocument()
+    expect(currentDoc2?.adjustments.exposure).toBe(1.5)
+    expect(currentDoc2?.isModified).toBe(true)
+  })
+
+  it('activates adjacent tab when active tab is closed', () => {
+    const store = useDocumentStore.getState()
+    const d1 = store.addDocument({
+      name: 'd1.png',
+      originalWidth: 100,
+      originalHeight: 100,
+      currentWidth: 100,
+      currentHeight: 100,
+      imageSrc: 'blob:d1',
+    })
+    const d2 = store.addDocument({
+      name: 'd2.png',
+      originalWidth: 100,
+      originalHeight: 100,
+      currentWidth: 100,
+      currentHeight: 100,
+      imageSrc: 'blob:d2',
+    })
+
+    expect(useDocumentStore.getState().activeDocumentId).toBe(d2.id)
+
+    // Close d2 -> d1 becomes active
+    store.closeDocument(d2.id!)
+    expect(useDocumentStore.getState().documents).toHaveLength(1)
+    expect(useDocumentStore.getState().activeDocumentId).toBe(d1.id)
+
+    // Close d1 -> active becomes null
+    store.closeDocument(d1.id!)
+    expect(useDocumentStore.getState().documents).toHaveLength(0)
+    expect(useDocumentStore.getState().activeDocumentId).toBeNull()
+  })
+})
