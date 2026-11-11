@@ -1,6 +1,5 @@
 export type AspectRatio =
   | 'free'
-  | 'original'
   | '1:1'
   | '16:9'
   | '4:3'

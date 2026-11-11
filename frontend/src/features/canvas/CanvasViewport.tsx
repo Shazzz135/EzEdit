@@ -196,8 +196,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         {cropOverlay && cropOverlay(panZoom.scale)}
       </div>
 
-      {/* Floating Zoom & Fit Controls (Bottom Left) */}
-      <div className="absolute bottom-3 left-3 z-30 flex items-center gap-1 px-2 py-1 bg-[#14141C]/90 backdrop-blur-xs border border-[#242432] rounded text-xs font-mono text-[#D0D0DC] shadow-lg">
+      {/* Floating Zoom & Fit Controls (Bottom Left - Hidden on Mobile) */}
+      <div className="hidden md:flex absolute bottom-3 left-3 z-30 items-center gap-1 px-2 py-1 bg-[#14141C]/90 backdrop-blur-xs border border-[#242432] rounded text-xs font-mono text-[#D0D0DC] shadow-lg">
         <button
           type="button"
           onClick={panZoom.resetZoom}

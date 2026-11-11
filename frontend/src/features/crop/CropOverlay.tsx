@@ -101,8 +101,8 @@ export const CropOverlay: React.FC<CropOverlayProps> = ({
           <div className="absolute left-0 right-0 top-2/3 h-[1px] bg-white/40" />
         </div>
 
-        {/* Live pixel dimensions badge */}
-        <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-[#12121A]/90 backdrop-blur-xs border border-[#282838] rounded text-[11px] font-mono text-[#E4E4F0] shadow-md pointer-events-none whitespace-nowrap">
+        {/* Live pixel dimensions badge (hidden on mobile) */}
+        <div className="hidden md:block absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-[#12121A]/90 backdrop-blur-xs border border-[#282838] rounded text-[11px] font-mono text-[#E4E4F0] shadow-md pointer-events-none whitespace-nowrap">
           {Math.round(cropRect.width)} × {Math.round(cropRect.height)} px
         </div>
 

@@ -16,7 +16,6 @@ export interface CropPanelProps {
 
 const RATIO_OPTIONS: { id: AspectRatio; label: string }[] = [
   { id: 'free', label: 'Free' },
-  { id: 'original', label: 'Original' },
   { id: '1:1', label: '1:1 Square' },
   { id: '16:9', label: '16:9 Wide' },
   { id: '4:3', label: '4:3 Classic' },
@@ -113,9 +112,9 @@ export const CropPanel: React.FC<CropPanelProps> = ({
         })}
       </div>
 
-      {/* Dimension Readout */}
+      {/* Dimension Readout (hidden on mobile) */}
       {cropRect && (
-        <div className="p-2.5 bg-[#14141E] border border-[#222230] rounded flex flex-col gap-1">
+        <div className="hidden md:flex p-2.5 bg-[#14141E] border border-[#222230] rounded flex-col gap-1">
           <span className="text-[11px] text-[#707080]">Cropped Resolution</span>
           <span className="text-xs font-mono font-semibold text-[#E0E0EC]">
             {Math.round(cropRect.width)} × {Math.round(cropRect.height)} px

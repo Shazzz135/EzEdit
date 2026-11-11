@@ -8,14 +8,12 @@ export function clamp(val: number, min: number, max: number): number {
 
 export function getAspectRatioValue(
   ratio: AspectRatio,
-  imageWidth: number,
-  imageHeight: number
+  _imageWidth?: number,
+  _imageHeight?: number
 ): number | null {
   switch (ratio) {
     case 'free':
       return null
-    case 'original':
-      return imageWidth > 0 && imageHeight > 0 ? imageWidth / imageHeight : 1.0
     case '1:1':
       return 1.0
     case '16:9':

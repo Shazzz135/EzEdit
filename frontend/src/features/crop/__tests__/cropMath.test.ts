@@ -22,7 +22,6 @@ describe('cropMath utilities and constraint engine', () => {
     expect(getAspectRatioValue('9:16', 1920, 1080)).toBeCloseTo(9 / 16)
     expect(getAspectRatioValue('3:2', 1920, 1080)).toBeCloseTo(3 / 2)
     expect(getAspectRatioValue('2:3', 1920, 1080)).toBeCloseTo(2 / 3)
-    expect(getAspectRatioValue('original', 1920, 1080)).toBeCloseTo(1920 / 1080)
   })
 
   it('calculates centered initial crop for free ratio', () => {
