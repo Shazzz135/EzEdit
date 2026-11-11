@@ -8,15 +8,18 @@ export interface CanvasViewportProps {
   onDropImage?: (file: File) => void
   onZoomChange?: (scale: number) => void
   cropOverlay?: (scale: number) => React.ReactNode
+  isPrecisionToolActive?: boolean
 }
 
 export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   document: activeDoc,
   onDropImage,
   cropOverlay,
+  isPrecisionToolActive: isPrecisionToolActiveProp,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const panZoom = useCanvasPanZoom()
+  const isPrecisionToolActive = isPrecisionToolActiveProp ?? !!cropOverlay
 
   const fitToScreen = panZoom.fitToScreen
   const docId = activeDoc?.id
@@ -64,21 +67,23 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     }
   }, [panZoom])
 
-  // Mouse pan handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && panZoom.isSpacePressed)) {
-      e.preventDefault()
+  // Pan handlers (default pan on left-click / touch when no precision tool is active)
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (isPrecisionToolActive && !panZoom.isSpacePressed && e.button !== 1) {
+      return
+    }
+    if (e.button === 0 || e.button === 1 || e.pointerType === 'touch') {
       panZoom.startPan(e.clientX, e.clientY)
     }
   }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerMove = (e: React.PointerEvent) => {
     if (panZoom.isPanning) {
       panZoom.updatePan(e.clientX, e.clientY)
     }
   }
 
-  const handleMouseUp = () => {
+  const handlePointerUp = () => {
     if (panZoom.isPanning) {
       panZoom.endPan()
     }
@@ -146,18 +151,18 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     <div
       ref={containerRef}
       onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      className={`relative w-full h-full overflow-hidden flex items-center justify-center select-none ${
-        panZoom.isSpacePressed
-          ? panZoom.isPanning
-            ? 'cursor-grabbing'
-            : 'cursor-grab'
-          : 'cursor-default'
+      className={`relative w-full h-full overflow-hidden flex items-center justify-center select-none touch-none ${
+        panZoom.isPanning
+          ? 'cursor-grabbing'
+          : !isPrecisionToolActive || panZoom.isSpacePressed
+            ? 'cursor-grab'
+            : 'cursor-default'
       }`}
     >
       {/* Transformed Image Container */}

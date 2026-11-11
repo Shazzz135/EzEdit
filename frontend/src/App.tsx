@@ -182,6 +182,7 @@ export const App: React.FC = () => {
           <CanvasViewport
             document={activeDoc}
             onDropImage={handleDropFile}
+            isPrecisionToolActive={crop.isCropActive}
             cropOverlay={
               activeDoc && crop.isCropActive && crop.cropRect
                 ? (scale) => (
