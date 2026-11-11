@@ -1,22 +1,27 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
 import { ToolsPanel, type ToolCategory } from '@/components/layout/ToolsPanel'
 import { WorkspaceModals } from '@/components/layout/WorkspaceModals'
+import { MobileDocumentSelector } from '@/components/layout/MobileDocumentSelector'
 import { TabBar } from '@/features/tabs/TabBar'
 import { CanvasViewport } from '@/features/canvas/CanvasViewport'
 import { useCropState, CropOverlay, executeCrop } from '@/features/crop'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { useDocumentPersistence } from '@/features/tabs/useDocumentPersistence'
-import { MAX_IMPORT_DIMENSION } from '@/types/document'
+import { MAX_IMPORT_DIMENSION, MAX_TAB_LIMIT } from '@/types/document'
 
 export const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('adjustments')
   const [tabLimitModalOpen, setTabLimitModalOpen] = useState(false)
   const [oversizedFile, setOversizedFile] = useState<{ file: File; width: number; height: number } | null>(null)
   const [unsavedDoc, setUnsavedDoc] = useState<{ id: string; name: string } | null>(null)
+  const mobileFileInputRef = useRef<HTMLInputElement>(null)
 
   const { quotaWarning, dismissQuotaWarning } = useDocumentPersistence()
   const {
+    documents,
+    activeDocumentId,
+    setActiveDocument,
     getActiveDocument,
     updateAdjustments,
     closeDocument,
@@ -135,14 +140,43 @@ export const App: React.FC = () => {
   const canUndo = !!(activeDoc && activeDoc.historyIndex > 0)
   const canRedo = !!(activeDoc && activeDoc.history && activeDoc.historyIndex < activeDoc.history.length - 1)
 
+  const mobileSelector = (
+    <MobileDocumentSelector
+      documents={documents}
+      activeDocumentId={activeDocumentId}
+      onSelectDocument={setActiveDocument}
+      onCloseDocument={(id) => {
+        const doc = documents.find((d) => d.id === id)
+        if (doc?.isModified) setUnsavedDoc({ id, name: doc.name })
+        else closeDocument(id)
+      }}
+      onImportClick={() => {
+        if (documents.length >= MAX_TAB_LIMIT) setTabLimitModalOpen(true)
+        else mobileFileInputRef.current?.click()
+      }}
+    />
+  )
+
   return (
     <>
+      <input
+        ref={mobileFileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.[0]) handleDropFile(e.target.files[0])
+          e.target.value = ''
+        }}
+      />
       <WorkspaceShell
         headerProps={{
           onUndo: canUndo ? () => undo(activeDoc!.id) : undefined,
           onRedo: canRedo ? () => redo(activeDoc!.id) : undefined,
+          onOpenAI: () => setActiveCategory('ai'),
           canUndo,
           canRedo,
+          mobileSelector,
         }}
         canvasContent={
           <CanvasViewport
@@ -200,10 +234,7 @@ export const App: React.FC = () => {
         onDownscaleAndImport={handleDownscaleAndImport}
         unsavedDoc={unsavedDoc}
         onKeepUnsavedDoc={() => setUnsavedDoc(null)}
-        onDiscardUnsavedDoc={() => {
-          if (unsavedDoc) closeDocument(unsavedDoc.id)
-          setUnsavedDoc(null)
-        }}
+        onDiscardUnsavedDoc={() => { if (unsavedDoc) closeDocument(unsavedDoc.id); setUnsavedDoc(null); }}
         quotaWarning={quotaWarning}
         onDismissQuotaWarning={dismissQuotaWarning}
       />
