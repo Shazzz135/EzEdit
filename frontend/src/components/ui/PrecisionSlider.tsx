@@ -137,7 +137,7 @@ export const PrecisionSlider: React.FC<PrecisionSliderProps> = ({
               title="Reset to default (0.0)"
               className="text-[#9090A0] hover:text-[#F4F4F6] transition-colors cursor-pointer"
             >
-              <RotateCcw className="w-3 h-3" />
+              <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
             </button>
           )}
         </div>

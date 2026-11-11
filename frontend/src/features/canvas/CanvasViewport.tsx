@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { useCanvasPanZoom } from './useCanvasPanZoom'
+import { WebGLCanvas } from '@/features/adjustments'
 import { type DocumentState } from '@/types/document'
 import { Maximize2, RotateCcw, Plus } from 'lucide-react'
 
@@ -58,22 +59,19 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
 
   // Keyboard spacebar listener for panning
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const onDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' && !e.repeat && document.activeElement?.tagName !== 'INPUT') {
         panZoom.setIsSpacePressed(true)
       }
     }
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        panZoom.setIsSpacePressed(false)
-      }
+    const onUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') panZoom.setIsSpacePressed(false)
     }
-
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('keydown', onDown)
+    window.addEventListener('keyup', onUp)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('keydown', onDown)
+      window.removeEventListener('keyup', onUp)
     }
   }, [panZoom])
 
@@ -184,10 +182,11 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         }}
         className="relative transition-transform duration-75 ease-out shadow-2xl flex-shrink-0"
       >
-        <img
-          src={activeDoc.imageSrc}
-          alt={activeDoc.name}
-          draggable={false}
+        <WebGLCanvas
+          imageSrc={activeDoc.imageSrc}
+          width={activeDoc.currentWidth}
+          height={activeDoc.currentHeight}
+          adjustments={activeDoc.adjustments}
           style={{
             imageRendering: panZoom.scale > 1.0 ? 'pixelated' : 'auto',
             transform: `${previewScale ? `scale(${previewScale.x}, ${previewScale.y}) ` : ''}${rotationAngle ? `rotate(${rotationAngle}deg)` : ''}`.trim() || undefined,
