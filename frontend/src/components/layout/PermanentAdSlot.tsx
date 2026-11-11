@@ -29,18 +29,20 @@ export const PermanentAdSlot: React.FC<PermanentAdSlotProps> = ({
   return (
     <aside
       aria-label="Advertisement"
-      className={`w-full h-[50px] min-h-[50px] max-h-[50px] bg-[#14141A] border-t border-[#24242E] flex items-center justify-between px-3 select-none flex-shrink-0 ${className}`}
+      className={`w-full h-[50px] min-h-[50px] max-h-[50px] bg-[#121218] border-t border-[#22222E] flex items-center justify-center px-4 select-none flex-shrink-0 ${className}`}
     >
-      <span className="text-[9px] uppercase font-mono tracking-wider text-[#606070]">
-        Ad Space
-      </span>
-      <div className="flex items-center gap-2 text-[#4A4A58] font-mono text-[10px]">
-        <span>320 × 50</span>
-        <span className="hidden sm:inline text-[9px] text-[#404050]">
-          Standard Mobile Banner
+      <div className="flex items-center justify-between w-full max-w-[480px]">
+        <span className="text-[9px] uppercase font-mono tracking-widest text-[#555566]">
+          Ad Space
         </span>
+        <div className="flex items-center gap-2 text-[#4A4A58] font-mono text-[10px] px-2.5 py-0.5 bg-[#181822] rounded border border-[#22222E]">
+          <span>320 × 50</span>
+          <span className="hidden xs:inline text-[9px] text-[#404050]">
+            Banner
+          </span>
+        </div>
+        <span className="text-[9px] font-mono text-[#404050]">EzEdit</span>
       </div>
-      <span className="text-[9px] text-[#404050]">EzEdit</span>
     </aside>
   )
 }

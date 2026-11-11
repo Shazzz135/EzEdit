@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { useCanvasPanZoom } from './useCanvasPanZoom'
 import { type DocumentState } from '@/types/document'
 import { Maximize2, RotateCcw, Plus } from 'lucide-react'
@@ -7,14 +7,19 @@ export interface CanvasViewportProps {
   document?: DocumentState
   onDropImage?: (file: File) => void
   onZoomChange?: (scale: number) => void
+  cropOverlay?: (scale: number) => React.ReactNode
+  isPrecisionToolActive?: boolean
 }
 
 export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   document: activeDoc,
   onDropImage,
+  cropOverlay,
+  isPrecisionToolActive: isPrecisionToolActiveProp,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const panZoom = useCanvasPanZoom()
+  const isPrecisionToolActive = isPrecisionToolActiveProp ?? !!cropOverlay
 
   const fitToScreen = panZoom.fitToScreen
   const docId = activeDoc?.id
@@ -29,17 +34,23 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     }
   }, [docId, docW, docH, fitToScreen])
 
-  // Mouse wheel zoom
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
+  // Native non-passive wheel listener allows e.preventDefault() for smooth focal zooming
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      if (!containerRef.current) return
-      const rect = containerRef.current.getBoundingClientRect()
+      const rect = container.getBoundingClientRect()
       const factor = e.deltaY < 0 ? 1.15 : 0.85
       panZoom.zoomTo(panZoom.scale * factor, { x: e.clientX, y: e.clientY }, rect)
-    },
-    [panZoom]
-  )
+    }
+
+    container.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      container.removeEventListener('wheel', onWheel)
+    }
+  }, [panZoom])
 
   // Keyboard spacebar listener for panning
   useEffect(() => {
@@ -62,21 +73,23 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     }
   }, [panZoom])
 
-  // Mouse pan handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && panZoom.isSpacePressed)) {
-      e.preventDefault()
+  // Pan handlers (default pan on left-click / touch when no precision tool is active)
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (isPrecisionToolActive && !panZoom.isSpacePressed && e.button !== 1) {
+      return
+    }
+    if (e.button === 0 || e.button === 1 || e.pointerType === 'touch') {
       panZoom.startPan(e.clientX, e.clientY)
     }
   }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerMove = (e: React.PointerEvent) => {
     if (panZoom.isPanning) {
       panZoom.updatePan(e.clientX, e.clientY)
     }
   }
 
-  const handleMouseUp = () => {
+  const handlePointerUp = () => {
     if (panZoom.isPanning) {
       panZoom.endPan()
     }
@@ -143,19 +156,18 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   return (
     <div
       ref={containerRef}
-      onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      className={`relative w-full h-full overflow-hidden flex items-center justify-center select-none ${
-        panZoom.isSpacePressed
-          ? panZoom.isPanning
-            ? 'cursor-grabbing'
-            : 'cursor-grab'
-          : 'cursor-default'
+      className={`relative w-full h-full overflow-hidden flex items-center justify-center select-none touch-none ${
+        panZoom.isPanning
+          ? 'cursor-grabbing'
+          : !isPrecisionToolActive || panZoom.isSpacePressed
+            ? 'cursor-grab'
+            : 'cursor-default'
       }`}
     >
       {/* Transformed Image Container */}
@@ -189,10 +201,13 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             className="absolute inset-0 pointer-events-none"
           />
         )}
+
+        {/* Dynamic Tool Overlays (e.g. Crop) */}
+        {cropOverlay && cropOverlay(panZoom.scale)}
       </div>
 
-      {/* Floating Zoom & Fit Controls (Bottom Left) */}
-      <div className="absolute bottom-3 left-3 z-30 flex items-center gap-1 px-2 py-1 bg-[#14141C]/90 backdrop-blur-xs border border-[#242432] rounded text-xs font-mono text-[#D0D0DC] shadow-lg">
+      {/* Floating Zoom & Fit Controls (Bottom Left - Hidden on Mobile) */}
+      <div className="hidden md:flex absolute bottom-3 left-3 z-30 items-center gap-1 px-2 py-1 bg-[#14141C]/90 backdrop-blur-xs border border-[#242432] rounded text-xs font-mono text-[#D0D0DC] shadow-lg">
         <button
           type="button"
           onClick={panZoom.resetZoom}

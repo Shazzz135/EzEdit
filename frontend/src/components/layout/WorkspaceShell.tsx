@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
+import { Plus } from 'lucide-react'
 import { Header, type HeaderProps } from './Header'
 import { PermanentAdSlot } from './PermanentAdSlot'
 
@@ -78,12 +79,12 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
         {/* B. Canvas Editor Viewport Area (Middle on Desktop, Top on Mobile) */}
         <section
           aria-label="Photo Canvas Viewport"
-          className="flex-1 relative bg-[#0B0B0E] overflow-hidden flex items-center justify-center min-h-[300px]"
+          className="flex-1 relative bg-[#0B0B0E] overflow-hidden flex items-center justify-center min-h-[160px] md:min-h-[300px]"
         >
           {canvasContent || (
             <div className="flex flex-col items-center justify-center p-6 text-center">
               <div className="w-16 h-16 rounded-full border border-dashed border-[#2E2E3E] flex items-center justify-center mb-3 text-[#606070]">
-                📁
+                <Plus className="w-6 h-6 text-[#60A5FA]" />
               </div>
               <h3 className="text-sm font-medium text-[#C8C8D4] mb-1">
                 Drop an image here or click Import
@@ -114,11 +115,11 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
           />
         </div>
 
-        {/* D. Tools Panel (Right on Desktop: Resizable width, Bottom on Mobile) */}
+        {/* D. Tools Panel (Full width on Mobile, Resizable width on Desktop) */}
         <aside
           aria-label="Editor Tools"
-          style={{ width: `var(--tools-width, ${toolsWidth}px)` }}
-          className="w-full md:w-[var(--tools-width)] md:min-w-[260px] md:max-w-[520px] h-[220px] md:h-full bg-[#16161C] border-t md:border-t-0 md:border-l border-[#242430] flex flex-col overflow-hidden flex-shrink-0 z-10"
+          style={{ '--tools-width': `${toolsWidth}px` } as React.CSSProperties}
+          className="w-full max-w-full md:w-[var(--tools-width)] md:min-w-[260px] md:max-w-[520px] h-[240px] md:h-full bg-[#16161C] border-t md:border-t-0 md:border-l border-[#242430] flex flex-col overflow-hidden flex-shrink-0 z-10"
         >
           {toolsContent || (
             <div className="flex-1 flex flex-col items-center justify-center p-4 text-[#707080] text-xs text-center">
@@ -128,10 +129,10 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
         </aside>
       </main>
 
-      {/* 3. Permanent Mobile Ad Banner (Fixed Bottom 320x50 on Mobile) */}
-      <div className="flex md:hidden w-full flex-shrink-0 z-20">
+      {/* 3. Permanent Mobile Ad Banner (Horizontal at the very bottom on Mobile: 320x50) */}
+      <footer className="flex md:hidden w-full flex-shrink-0 z-20">
         <PermanentAdSlot placement="mobile-banner" />
-      </div>
+      </footer>
     </div>
   )
 }
