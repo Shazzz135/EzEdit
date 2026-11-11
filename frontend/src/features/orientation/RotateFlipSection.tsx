@@ -27,7 +27,7 @@ export const RotateFlipSection: React.FC<RotateFlipSectionProps> = ({
   const isAngleChanged = rotationAngle !== 0
 
   return (
-    <div className="flex flex-col gap-3 pb-4 border-b border-[#222230]">
+    <div className="flex flex-col gap-3">
       {/* Strong Header */}
       <div className="flex items-center justify-between pb-1.5 border-b border-[#222230]">
         <div className="flex items-center gap-2">
@@ -36,16 +36,15 @@ export const RotateFlipSection: React.FC<RotateFlipSectionProps> = ({
             Rotate & Flip
           </span>
         </div>
-        {isAngleChanged && (
-          <button
-            type="button"
-            onClick={onResetRotation}
-            className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
-          >
-            <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
-            <span>Reset (0°)</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onResetRotation}
+          title="Reset Rotation to 0°"
+          className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
+        >
+          <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
+          <span>Reset</span>
+        </button>
       </div>
 
       {/* Rotation Slider & Degree Input (0° - 360°) */}

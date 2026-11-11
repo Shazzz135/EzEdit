@@ -29,6 +29,7 @@ export const App: React.FC = () => {
     setActiveDocument,
     getActiveDocument,
     updateAdjustments,
+    resetAdjustments,
     closeDocument,
     addDocument,
     applyRasterTransform,
@@ -202,6 +203,7 @@ export const App: React.FC = () => {
             }}
             activeDoc={activeDoc}
             onUpdateAdjustments={updateAdjustments}
+            onResetAdjustments={resetAdjustments}
             onApplyTransform={handleApplyTransform}
             onPreviewScaleChange={setPreviewScale}
             rotationAngle={rotationAngle}

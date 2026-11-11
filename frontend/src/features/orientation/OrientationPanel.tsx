@@ -121,6 +121,9 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         onResetCrop={cropProps.onResetCrop}
       />
 
+      {/* Bold Separator */}
+      <div className="h-[2px] bg-[#323246] w-full rounded-full my-0.5" />
+
       {/* Section 2: Rotate (0° - 360°) & Flip */}
       <RotateFlipSection
         rotationAngle={rotationAngle}
@@ -130,6 +133,9 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         onFlip={handleFlip}
         isProcessing={transform.isProcessing}
       />
+
+      {/* Bold Separator */}
+      <div className="h-[2px] bg-[#323246] w-full rounded-full my-0.5" />
 
       {/* Section 3: Scale(px) */}
       <ScaleSection
@@ -143,6 +149,9 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         onResetScale={transform.resetResize}
         isProcessing={transform.isProcessing}
       />
+
+      {/* Bold Separator */}
+      <div className="h-[2px] bg-[#323246] w-full rounded-full my-0.5" />
 
       {/* Section 4: Stretch */}
       <StretchSection

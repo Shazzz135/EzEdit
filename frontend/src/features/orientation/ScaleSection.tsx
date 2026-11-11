@@ -28,7 +28,7 @@ export const ScaleSection: React.FC<ScaleSectionProps> = ({
   const isChanged = width !== currentWidth || height !== currentHeight
 
   return (
-    <div className="flex flex-col gap-3 pb-4 border-b border-[#222230]">
+    <div className="flex flex-col gap-3">
       {/* Strong Header */}
       <div className="flex items-center justify-between pb-1.5 border-b border-[#222230]">
         <div className="flex items-center gap-2">
@@ -37,16 +37,15 @@ export const ScaleSection: React.FC<ScaleSectionProps> = ({
             Scale(px)
           </span>
         </div>
-        {isChanged && (
-          <button
-            type="button"
-            onClick={onResetScale}
-            className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
-          >
-            <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
-            <span>Reset</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onResetScale}
+          title="Reset Scale"
+          className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
+        >
+          <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
+          <span>Reset</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-2">

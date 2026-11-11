@@ -39,16 +39,15 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
             Stretch
           </span>
         </div>
-        {isChanged && (
-          <button
-            type="button"
-            onClick={onResetStretch}
-            className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
-          >
-            <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
-            <span>Reset (100%)</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onResetStretch}
+          title="Reset Stretch to 100%"
+          className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
+        >
+          <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
+          <span>Reset</span>
+        </button>
       </div>
 
       {/* Stretch X */}

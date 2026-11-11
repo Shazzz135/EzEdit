@@ -5,7 +5,7 @@ import { OrientationPanel } from '@/features/orientation'
 import { type CropPanelProps } from '@/features/crop/CropPanel'
 import { type DocumentState, type AdjustmentValues } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
-import { Crop, Sliders, Wand2, Brush, Scissors, Sparkles } from 'lucide-react'
+import { Crop, Sliders, Wand2, Brush, Scissors, Sparkles, RotateCcw } from 'lucide-react'
 
 export type ToolCategory =
   | 'orientation'
@@ -29,6 +29,7 @@ export interface ToolsPanelProps {
   onSelectCategory: (category: ToolCategory) => void
   activeDoc?: DocumentState
   onUpdateAdjustments: (id: string, partial: Partial<AdjustmentValues>) => void
+  onResetAdjustments?: (id: string) => void
   cropProps?: CropPanelProps
   onApplyTransform?: (result: TransformResult) => void
   onPreviewScaleChange?: (scale: { x: number; y: number } | undefined) => void
@@ -41,6 +42,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   onSelectCategory,
   activeDoc,
   onUpdateAdjustments,
+  onResetAdjustments,
   cropProps,
   onApplyTransform,
   onPreviewScaleChange,
@@ -74,9 +76,20 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
 
         {activeDoc && activeCategory === 'adjustments' && (
           <div className="flex flex-col gap-3">
-            <h4 className="text-xs font-semibold text-[#A0A0B0] uppercase tracking-wider">
-              Light & Color
-            </h4>
+            <div className="flex items-center justify-between pb-1.5 border-b border-[#222230]">
+              <h4 className="text-xs font-semibold text-[#A0A0B0] uppercase tracking-wider">
+                Light & Color
+              </h4>
+              <button
+                type="button"
+                onClick={() => onResetAdjustments?.(activeDoc.id)}
+                title="Reset Adjustments"
+                className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
+                <span>Reset</span>
+              </button>
+            </div>
             <PrecisionSlider
               label="Exposure"
               value={activeDoc.adjustments.exposure}

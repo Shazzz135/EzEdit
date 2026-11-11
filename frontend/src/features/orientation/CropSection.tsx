@@ -47,7 +47,7 @@ export const CropSection: React.FC<CropSectionProps> = ({
   }, [isCropActive, onApplyCrop, onCancelCrop])
 
   return (
-    <div className="flex flex-col gap-3 pb-4 border-b border-[#222230]">
+    <div className="flex flex-col gap-3">
       {/* Strong Header */}
       <div className="flex items-center justify-between pb-1.5 border-b border-[#222230]">
         <div className="flex items-center gap-2">
@@ -56,11 +56,11 @@ export const CropSection: React.FC<CropSectionProps> = ({
             Crop
           </span>
         </div>
-        {isCropActive && onResetCrop && (
+        {onResetCrop && (
           <button
             type="button"
             onClick={onResetCrop}
-            title="Reset to Full Image"
+            title="Reset Crop"
             className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
           >
             <RotateCcw className="w-3 h-3 text-[#60A5FA]" />

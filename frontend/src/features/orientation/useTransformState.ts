@@ -78,11 +78,22 @@ export function useTransformState({
     setStretchY(100)
   }, [])
 
+  const isScaled =
+    resizeWidth !== currentWidth || resizeHeight !== currentHeight
   const isStretched = stretchX !== 100 || stretchY !== 100
 
-  const previewScale = isStretched
-    ? { x: stretchX / 100, y: stretchY / 100 }
-    : undefined
+  // Real-time preview scale for both Scale(px) and Stretch
+  const previewScale =
+    isScaled || isStretched
+      ? {
+          x:
+            (resizeWidth / Math.max(1, currentWidth)) *
+            (stretchX / 100),
+          y:
+            (resizeHeight / Math.max(1, currentHeight)) *
+            (stretchY / 100),
+        }
+      : undefined
 
   return {
     resizeWidth,
@@ -97,6 +108,7 @@ export function useTransformState({
     setStretchX,
     setStretchY,
     resetStretch,
+    isScaled,
     isStretched,
     previewScale,
     isProcessing,
