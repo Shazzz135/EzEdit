@@ -16,8 +16,14 @@ export const TabBar: React.FC<TabBarProps> = ({
   onUnsavedClosePrompt,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { documents, activeDocumentId, setActiveDocument, closeDocument, addDocument } =
-    useDocumentStore()
+  const {
+    documents,
+    activeDocumentId,
+    setActiveDocument,
+    closeDocument,
+    addDocument,
+    renameDocument,
+  } = useDocumentStore()
 
   const handleOpenPicker = () => {
     if (documents.length >= MAX_TAB_LIMIT) {
@@ -93,6 +99,7 @@ export const TabBar: React.FC<TabBarProps> = ({
             isActive={doc.id === activeDocumentId}
             onSelect={setActiveDocument}
             onClose={handleClose}
+            onRename={renameDocument}
           />
         ))}
       </div>

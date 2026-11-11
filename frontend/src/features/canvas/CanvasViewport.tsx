@@ -8,14 +8,20 @@ export interface CanvasViewportProps {
   onDropImage?: (file: File) => void
   onZoomChange?: (scale: number) => void
   cropOverlay?: (scale: number) => React.ReactNode
+  rotateOverlay?: React.ReactNode
   isPrecisionToolActive?: boolean
+  previewScale?: { x: number; y: number }
+  rotationAngle?: number
 }
 
 export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   document: activeDoc,
   onDropImage,
   cropOverlay,
+  rotateOverlay,
   isPrecisionToolActive: isPrecisionToolActiveProp,
+  previewScale,
+  rotationAngle,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const panZoom = useCanvasPanZoom()
@@ -47,9 +53,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     }
 
     container.addEventListener('wheel', onWheel, { passive: false })
-    return () => {
-      container.removeEventListener('wheel', onWheel)
-    }
+    return () => container.removeEventListener('wheel', onWheel)
   }, [panZoom])
 
   // Keyboard spacebar listener for panning
@@ -186,8 +190,9 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           draggable={false}
           style={{
             imageRendering: panZoom.scale > 1.0 ? 'pixelated' : 'auto',
+            transform: `${previewScale ? `scale(${previewScale.x}, ${previewScale.y}) ` : ''}${rotationAngle ? `rotate(${rotationAngle}deg)` : ''}`.trim() || undefined,
           }}
-          className="w-full h-full object-contain pointer-events-none"
+          className="w-full h-full object-contain pointer-events-none transition-transform duration-75"
         />
 
         {/* Pixel grid overlay above 800% zoom */}
@@ -202,7 +207,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           />
         )}
 
-        {/* Dynamic Tool Overlays (e.g. Crop) */}
+        {/* Dynamic Tool Overlays */}
+        {rotateOverlay}
         {cropOverlay && cropOverlay(panZoom.scale)}
       </div>
 
@@ -220,10 +226,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         <button
           type="button"
           onClick={() => {
-            if (containerRef.current) {
-              const rect = containerRef.current.getBoundingClientRect()
-              panZoom.fitToScreen(rect.width, rect.height, activeDoc.currentWidth, activeDoc.currentHeight)
-            }
+            const rect = containerRef.current?.getBoundingClientRect()
+            if (rect) panZoom.fitToScreen(rect.width, rect.height, activeDoc.currentWidth, activeDoc.currentHeight)
           }}
           title="Fit to Screen"
           className="p-0.5 hover:text-[#60A5FA] text-[#808094] cursor-pointer"

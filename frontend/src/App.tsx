@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
 import { ToolsPanel, type ToolCategory } from '@/components/layout/ToolsPanel'
 import { WorkspaceModals } from '@/components/layout/WorkspaceModals'
@@ -6,15 +6,20 @@ import { MobileDocumentSelector } from '@/components/layout/MobileDocumentSelect
 import { TabBar } from '@/features/tabs/TabBar'
 import { CanvasViewport } from '@/features/canvas/CanvasViewport'
 import { useCropState, CropOverlay, executeCrop } from '@/features/crop'
+import { RotateHandle } from '@/features/orientation'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { useDocumentPersistence } from '@/features/tabs/useDocumentPersistence'
+import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts'
 import { MAX_IMPORT_DIMENSION, MAX_TAB_LIMIT } from '@/types/document'
+import { type TransformResult } from '@/types/transform'
 
 export const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('adjustments')
   const [tabLimitModalOpen, setTabLimitModalOpen] = useState(false)
   const [oversizedFile, setOversizedFile] = useState<{ file: File; width: number; height: number } | null>(null)
   const [unsavedDoc, setUnsavedDoc] = useState<{ id: string; name: string } | null>(null)
+  const [previewScale, setPreviewScale] = useState<{ x: number; y: number } | undefined>(undefined)
+  const [rotationAngle, setRotationAngle] = useState(0)
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
 
   const { quotaWarning, dismissQuotaWarning } = useDocumentPersistence()
@@ -24,6 +29,7 @@ export const App: React.FC = () => {
     setActiveDocument,
     getActiveDocument,
     updateAdjustments,
+    resetAdjustments,
     closeDocument,
     addDocument,
     applyRasterTransform,
@@ -34,43 +40,23 @@ export const App: React.FC = () => {
   const crop = useCropState()
 
   // Undo/Redo keyboard shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z)
-  useEffect(() => {
-    const handleUndoRedo = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
-        if (e.key === 'z' || e.key === 'Z') {
-          if (e.shiftKey) {
-            e.preventDefault()
-            if (activeDoc && activeDoc.history && activeDoc.historyIndex < activeDoc.history.length - 1) {
-              redo(activeDoc.id)
-            }
-          } else {
-            e.preventDefault()
-            if (activeDoc && activeDoc.historyIndex > 0) {
-              undo(activeDoc.id)
-            }
-          }
-        } else if (e.key === 'y' || e.key === 'Y') {
-          e.preventDefault()
-          if (activeDoc && activeDoc.history && activeDoc.historyIndex < activeDoc.history.length - 1) {
-            redo(activeDoc.id)
-          }
-        }
-      }
-    }
-    window.addEventListener('keydown', handleUndoRedo)
-    return () => window.removeEventListener('keydown', handleUndoRedo)
-  }, [activeDoc, undo, redo])
+  useUndoRedoShortcuts(activeDoc, undo, redo)
+
+  const handleApplyTransform = (result: TransformResult) => {
+    if (!activeDoc) return
+    applyRasterTransform(activeDoc.id, {
+      url: result.url,
+      blob: result.blob,
+      width: result.width,
+      height: result.height,
+    })
+  }
 
   const handleApplyCrop = async () => {
     if (!activeDoc || !crop.cropRect) return
     try {
       const result = await executeCrop(activeDoc.imageSrc, crop.cropRect)
-      applyRasterTransform(activeDoc.id, {
-        url: result.url,
-        blob: result.blob,
-        width: result.width,
-        height: result.height,
-      })
+      handleApplyTransform(result)
       crop.cancelCrop()
     } catch (err) {
       console.error('Failed to apply crop:', err)
@@ -174,14 +160,22 @@ export const App: React.FC = () => {
           onUndo: canUndo ? () => undo(activeDoc!.id) : undefined,
           onRedo: canRedo ? () => redo(activeDoc!.id) : undefined,
           onOpenAI: () => setActiveCategory('ai'),
-          canUndo,
-          canRedo,
-          mobileSelector,
+          canUndo, canRedo, mobileSelector,
         }}
         canvasContent={
           <CanvasViewport
             document={activeDoc}
             onDropImage={handleDropFile}
+            previewScale={previewScale}
+            rotationAngle={rotationAngle}
+            rotateOverlay={
+              activeDoc && activeCategory === 'orientation' && !crop.isCropActive ? (
+                <RotateHandle
+                  rotationAngle={rotationAngle}
+                  onRotateChange={setRotationAngle}
+                />
+              ) : undefined
+            }
             isPrecisionToolActive={crop.isCropActive}
             cropOverlay={
               activeDoc && crop.isCropActive && crop.cropRect
@@ -203,9 +197,17 @@ export const App: React.FC = () => {
         toolsContent={
           <ToolsPanel
             activeCategory={activeCategory}
-            onSelectCategory={setActiveCategory}
+            onSelectCategory={(cat) => {
+              setActiveCategory(cat)
+              if (cat !== 'orientation') setRotationAngle(0)
+            }}
             activeDoc={activeDoc}
             onUpdateAdjustments={updateAdjustments}
+            onResetAdjustments={resetAdjustments}
+            onApplyTransform={handleApplyTransform}
+            onPreviewScaleChange={setPreviewScale}
+            rotationAngle={rotationAngle}
+            onRotateChange={setRotationAngle}
             cropProps={{
               isCropActive: crop.isCropActive,
               cropRect: crop.cropRect,

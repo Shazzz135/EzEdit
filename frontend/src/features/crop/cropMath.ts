@@ -39,12 +39,8 @@ export function calculateInitialCrop(
   const ratioValue = getAspectRatioValue(ratio, imageWidth, imageHeight)
 
   if (!ratioValue) {
-    // 90% centered crop
-    const width = Math.round(imageWidth * 0.9)
-    const height = Math.round(imageHeight * 0.9)
-    const x = Math.round((imageWidth - width) / 2)
-    const y = Math.round((imageHeight - height) / 2)
-    return { x, y, width, height }
+    // Free crop fills the full space of the image (e.g. 200x200 fills 200x200)
+    return { x: 0, y: 0, width: imageWidth, height: imageHeight }
   }
 
   const maxWidth = imageWidth * 0.9
