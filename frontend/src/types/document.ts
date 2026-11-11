@@ -54,6 +54,7 @@ export interface DocumentState {
   currentWidth: number
   currentHeight: number
   imageSrc: string
+  imageBlob?: Blob
   thumbnailUrl?: string
   isModified: boolean
   adjustments: AdjustmentValues

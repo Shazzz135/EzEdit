@@ -48,6 +48,7 @@ export const TabBar: React.FC<TabBarProps> = ({
         currentWidth: width,
         currentHeight: height,
         imageSrc: objectUrl,
+        imageBlob: file,
       })
     }
     img.src = objectUrl

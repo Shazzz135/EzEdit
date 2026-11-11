@@ -3,6 +3,7 @@ import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
 import { TabBar } from '@/features/tabs/TabBar'
 import { CanvasViewport } from '@/features/canvas/CanvasViewport'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
+import { useDocumentPersistence } from '@/features/tabs/useDocumentPersistence'
 import { PrecisionSlider } from '@/components/ui/PrecisionSlider'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -12,23 +13,24 @@ import { MAX_TAB_LIMIT, MAX_IMPORT_DIMENSION } from '@/types/document'
 
 type ToolCategory = 'orientation' | 'adjustments' | 'filters' | 'selection' | 'retouch' | 'ai'
 
+const TOOL_CATEGORIES = [
+  { id: 'orientation', label: 'Orientation & Alignment', icon: Crop },
+  { id: 'adjustments', label: 'Simple Adjustments', icon: Sliders },
+  { id: 'filters', label: 'Preset Filters', icon: Wand2 },
+  { id: 'selection', label: 'Precise Selection', icon: Scissors },
+  { id: 'retouch', label: 'Advanced Retouching', icon: Brush },
+  { id: 'ai', label: 'AI Tools (Pollinations.ai)', icon: Sparkles },
+] as const
+
 export const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('adjustments')
   const [tabLimitModalOpen, setTabLimitModalOpen] = useState(false)
   const [oversizedFile, setOversizedFile] = useState<{ file: File; width: number; height: number } | null>(null)
   const [unsavedDoc, setUnsavedDoc] = useState<{ id: string; name: string } | null>(null)
 
+  const { quotaWarning, dismissQuotaWarning } = useDocumentPersistence()
   const { getActiveDocument, updateAdjustments, closeDocument, addDocument } = useDocumentStore()
   const activeDoc = getActiveDocument()
-
-  const toolCategories = [
-    { id: 'orientation', label: 'Orientation & Alignment', icon: Crop },
-    { id: 'adjustments', label: 'Simple Adjustments', icon: Sliders },
-    { id: 'filters', label: 'Preset Filters', icon: Wand2 },
-    { id: 'selection', label: 'Precise Selection', icon: Scissors },
-    { id: 'retouch', label: 'Advanced Retouching', icon: Brush },
-    { id: 'ai', label: 'AI Tools (Pollinations.ai)', icon: Sparkles },
-  ] as const
 
   const handleDownscaleAndImport = () => {
     if (!oversizedFile) return
@@ -56,6 +58,7 @@ export const App: React.FC = () => {
               currentWidth: targetW,
               currentHeight: targetH,
               imageSrc: downscaledUrl,
+              imageBlob: blob,
             })
           }
           URL.revokeObjectURL(url)
@@ -72,7 +75,7 @@ export const App: React.FC = () => {
       <div className="p-2.5 border-b border-[#242430] bg-[#14141A] flex-shrink-0">
         <Dropdown
           label="Tool Category"
-          options={toolCategories}
+          options={TOOL_CATEGORIES}
           selectedId={activeCategory}
           onSelect={(id) => setActiveCategory(id as ToolCategory)}
         />
@@ -110,7 +113,7 @@ export const App: React.FC = () => {
         {activeDoc && activeCategory !== 'adjustments' && (
           <div className="flex flex-col items-center justify-center p-6 text-center text-[#707080] text-xs">
             <span>
-              {toolCategories.find((c) => c.id === activeCategory)?.label} tools will activate in Milestone{' '}
+              {TOOL_CATEGORIES.find((c) => c.id === activeCategory)?.label} tools will activate in Milestone{' '}
               {activeCategory === 'orientation' ? 4 : activeCategory === 'filters' ? 5 : activeCategory === 'selection' ? 6 : activeCategory === 'retouch' ? 7 : 8}
             </span>
           </div>
@@ -142,6 +145,7 @@ export const App: React.FC = () => {
         currentWidth: width,
         currentHeight: height,
         imageSrc: objectUrl,
+        imageBlob: file,
       })
     }
     img.src = objectUrl
@@ -214,6 +218,22 @@ export const App: React.FC = () => {
           >
             Discard & Close
           </Button>
+        </div>
+      </Modal>
+      <Modal isOpen={!!quotaWarning} onClose={dismissQuotaWarning} title="Storage Quota Warning">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-[#C0C0D0] space-y-2">
+            <p>
+              Device storage is <strong className="text-amber-400">{Math.round(quotaWarning?.percentUsed || 0)}%</strong> used.
+            </p>
+            <p className="text-[#808090]">
+              To prevent data loss, please close unneeded document tabs or free device storage space.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <Button variant="primary" size="sm" onClick={dismissQuotaWarning}>Understood</Button>
         </div>
       </Modal>
     </>
