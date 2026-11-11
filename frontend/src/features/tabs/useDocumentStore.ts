@@ -15,6 +15,7 @@ export interface DocumentStore {
   addDocument: (doc: Omit<DocumentState, 'id' | 'createdAt' | 'updatedAt' | 'adjustments' | 'orientation' | 'isModified' | 'history' | 'historyIndex'>) => { success: boolean; id?: string; error?: 'MAX_TABS_EXCEEDED' }
   closeDocument: (id: string) => void
   setActiveDocument: (id: string) => void
+  renameDocument: (id: string, name: string) => void
   updateAdjustments: (id: string, partial: Partial<AdjustmentValues>) => void
   resetAdjustments: (id: string) => void
   updateOrientation: (id: string, partial: Partial<OrientationValues>) => void
@@ -100,8 +101,16 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     })
   },
 
-  setActiveDocument: (id) => {
-    set({ activeDocumentId: id })
+  setActiveDocument: (id) => set({ activeDocumentId: id }),
+
+  renameDocument: (id, name) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    set((state) => ({
+      documents: state.documents.map((doc) =>
+        doc.id === id ? { ...doc, name: trimmed, updatedAt: Date.now() } : doc
+      ),
+    }))
   },
 
   updateAdjustments: (id, partial) => {
@@ -122,13 +131,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   resetAdjustments: (id) => {
     set((state) => ({
       documents: state.documents.map((doc) =>
-        doc.id === id
-          ? {
-              ...doc,
-              adjustments: { ...defaultAdjustments },
-              updatedAt: Date.now(),
-            }
-          : doc
+        doc.id === id ? { ...doc, adjustments: { ...defaultAdjustments }, updatedAt: Date.now() } : doc
       ),
     }))
   },
