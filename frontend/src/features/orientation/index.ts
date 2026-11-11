@@ -1,5 +1,7 @@
 export * from './OrientationPanel'
 export * from './CropSection'
+export * from './RotateFlipCard'
+export * from './RotateHandle'
 export * from './ScaleSection'
 export * from './StretchSection'
 export * from './transformMath'

@@ -1,17 +1,11 @@
 import React, { useEffect } from 'react'
-import {
-  RotateCcw,
-  RotateCw,
-  RefreshCw,
-  FlipHorizontal,
-  FlipVertical,
-} from 'lucide-react'
 import { type DocumentState } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
 import { type AspectRatio } from '@/types/crop'
 import { type CropPanelProps } from '@/features/crop/CropPanel'
 import { useTransformState } from './useTransformState'
 import { CropSection } from './CropSection'
+import { RotateFlipCard } from './RotateFlipCard'
 import { ScaleSection } from './ScaleSection'
 import { StretchSection } from './StretchSection'
 import {
@@ -24,6 +18,8 @@ import {
 export interface OrientationPanelProps {
   document: DocumentState
   cropProps: CropPanelProps
+  rotationAngle: number
+  onRotateChange: (angle: number) => void
   onApplyTransform: (result: TransformResult) => void
   onPreviewScaleChange?: (scale: { x: number; y: number } | undefined) => void
 }
@@ -31,6 +27,8 @@ export interface OrientationPanelProps {
 export const OrientationPanel: React.FC<OrientationPanelProps> = ({
   document: doc,
   cropProps,
+  rotationAngle,
+  onRotateChange,
   onApplyTransform,
   onPreviewScaleChange,
 }) => {
@@ -51,11 +49,13 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
     cropProps.onSelectRatio(ratio)
   }
 
-  const handleRotate = async (degrees: 90 | 180 | 270) => {
+  const handleApplyRotation = async () => {
+    if (rotationAngle === 0) return
     try {
       transform.setIsProcessing(true)
-      const res = await executeRotate(doc.imageSrc, degrees)
+      const res = await executeRotate(doc.imageSrc, rotationAngle)
       onApplyTransform(res)
+      onRotateChange(0)
     } catch (err) {
       console.error('Failed to rotate image:', err)
     } finally {
@@ -110,7 +110,7 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
 
   return (
     <div className="flex flex-col gap-3 pb-4">
-      {/* Block 1: Crop */}
+      {/* Card 1: Crop */}
       <CropSection
         isCropActive={cropProps.isCropActive}
         cropRect={cropProps.cropRect}
@@ -121,73 +121,17 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         onResetCrop={cropProps.onResetCrop}
       />
 
-      {/* Block 2: Rotate & Flip */}
-      <div className="flex flex-col gap-2.5 p-3 bg-[#171722] rounded-xl border border-[#242434]">
-        <div className="flex items-center gap-1.5">
-          <RotateCw className="w-3.5 h-3.5 text-[#60A5FA]" />
-          <span className="text-xs font-semibold text-[#A0A0B2] uppercase tracking-wider">
-            Rotate & Flip
-          </span>
-        </div>
+      {/* Card 2: Rotate (0° - 360°) & Flip */}
+      <RotateFlipCard
+        rotationAngle={rotationAngle}
+        onRotateChange={onRotateChange}
+        onApplyRotation={handleApplyRotation}
+        onResetRotation={() => onRotateChange(0)}
+        onFlip={handleFlip}
+        isProcessing={transform.isProcessing}
+      />
 
-        <div className="grid grid-cols-3 gap-1.5">
-          <button
-            type="button"
-            onClick={() => handleRotate(270)}
-            disabled={transform.isProcessing}
-            title="Rotate 90° Counter-Clockwise"
-            className="flex flex-col items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1 transition-all cursor-pointer"
-          >
-            <RotateCcw className="w-4 h-4 text-[#60A5FA]" />
-            <span>90° CCW</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleRotate(90)}
-            disabled={transform.isProcessing}
-            title="Rotate 90° Clockwise"
-            className="flex flex-col items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1 transition-all cursor-pointer"
-          >
-            <RotateCw className="w-4 h-4 text-[#60A5FA]" />
-            <span>90° CW</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleRotate(180)}
-            disabled={transform.isProcessing}
-            title="Rotate 180°"
-            className="flex flex-col items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1 transition-all cursor-pointer"
-          >
-            <RefreshCw className="w-4 h-4 text-[#60A5FA]" />
-            <span>180°</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5 mt-0.5">
-          <button
-            type="button"
-            onClick={() => handleFlip('horizontal')}
-            disabled={transform.isProcessing}
-            title="Flip Horizontal (Mirror)"
-            className="flex items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
-          >
-            <FlipHorizontal className="w-4 h-4 text-[#60A5FA]" />
-            <span>Flip H</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleFlip('vertical')}
-            disabled={transform.isProcessing}
-            title="Flip Vertical"
-            className="flex items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
-          >
-            <FlipVertical className="w-4 h-4 text-[#60A5FA]" />
-            <span>Flip V</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Block 3: Scale(px) */}
+      {/* Card 3: Scale(px) */}
       <ScaleSection
         width={transform.resizeWidth}
         height={transform.resizeHeight}
@@ -200,7 +144,7 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         isProcessing={transform.isProcessing}
       />
 
-      {/* Block 4: Stretch */}
+      {/* Card 4: Stretch */}
       <StretchSection
         scaleX={transform.stretchX}
         scaleY={transform.stretchY}

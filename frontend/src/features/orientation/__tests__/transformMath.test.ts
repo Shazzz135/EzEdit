@@ -42,6 +42,18 @@ describe('transformMath', () => {
       const result = calculateRotatedDimensions(1920, 1080, 180)
       expect(result).toEqual({ width: 1920, height: 1080 })
     })
+
+    it('preserves dimensions for 0 and 360 degrees', () => {
+      expect(calculateRotatedDimensions(1920, 1080, 0)).toEqual({ width: 1920, height: 1080 })
+      expect(calculateRotatedDimensions(1920, 1080, 360)).toEqual({ width: 1920, height: 1080 })
+    })
+
+    it('expands bounding box correctly for arbitrary degrees', () => {
+      // 100x100 square rotated 45 deg: new dimension is 100*sqrt(2) approx 141
+      const result = calculateRotatedDimensions(100, 100, 45)
+      expect(result.width).toBe(141)
+      expect(result.height).toBe(141)
+    })
   })
 
   describe('calculateAspectResize', () => {

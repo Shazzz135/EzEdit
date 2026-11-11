@@ -17,10 +17,22 @@ export function calculateRotatedDimensions(
   height: number,
   degrees: RotateDegree
 ): { width: number; height: number } {
-  if (degrees === 90 || degrees === 270) {
+  const normDeg = ((Math.round(degrees) % 360) + 360) % 360
+  if (normDeg === 0 || normDeg === 180) {
+    return { width, height }
+  }
+  if (normDeg === 90 || normDeg === 270) {
     return { width: height, height: width }
   }
-  return { width, height }
+  const rad = (normDeg * Math.PI) / 180
+  const sin = Math.abs(Math.sin(rad))
+  const cos = Math.abs(Math.cos(rad))
+  const targetW = Math.round(width * cos + height * sin)
+  const targetH = Math.round(width * sin + height * cos)
+  return {
+    width: clampDimension(targetW),
+    height: clampDimension(targetH),
+  }
 }
 
 export function calculateAspectResize(

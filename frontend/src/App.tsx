@@ -6,6 +6,7 @@ import { MobileDocumentSelector } from '@/components/layout/MobileDocumentSelect
 import { TabBar } from '@/features/tabs/TabBar'
 import { CanvasViewport } from '@/features/canvas/CanvasViewport'
 import { useCropState, CropOverlay, executeCrop } from '@/features/crop'
+import { RotateHandle } from '@/features/orientation'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { useDocumentPersistence } from '@/features/tabs/useDocumentPersistence'
 import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts'
@@ -18,6 +19,7 @@ export const App: React.FC = () => {
   const [oversizedFile, setOversizedFile] = useState<{ file: File; width: number; height: number } | null>(null)
   const [unsavedDoc, setUnsavedDoc] = useState<{ id: string; name: string } | null>(null)
   const [previewScale, setPreviewScale] = useState<{ x: number; y: number } | undefined>(undefined)
+  const [rotationAngle, setRotationAngle] = useState(0)
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
 
   const { quotaWarning, dismissQuotaWarning } = useDocumentPersistence()
@@ -157,15 +159,22 @@ export const App: React.FC = () => {
           onUndo: canUndo ? () => undo(activeDoc!.id) : undefined,
           onRedo: canRedo ? () => redo(activeDoc!.id) : undefined,
           onOpenAI: () => setActiveCategory('ai'),
-          canUndo,
-          canRedo,
-          mobileSelector,
+          canUndo, canRedo, mobileSelector,
         }}
         canvasContent={
           <CanvasViewport
             document={activeDoc}
             onDropImage={handleDropFile}
             previewScale={previewScale}
+            rotationAngle={rotationAngle}
+            rotateOverlay={
+              activeDoc && activeCategory === 'orientation' && !crop.isCropActive ? (
+                <RotateHandle
+                  rotationAngle={rotationAngle}
+                  onRotateChange={setRotationAngle}
+                />
+              ) : undefined
+            }
             isPrecisionToolActive={crop.isCropActive}
             cropOverlay={
               activeDoc && crop.isCropActive && crop.cropRect
@@ -187,11 +196,16 @@ export const App: React.FC = () => {
         toolsContent={
           <ToolsPanel
             activeCategory={activeCategory}
-            onSelectCategory={setActiveCategory}
+            onSelectCategory={(cat) => {
+              setActiveCategory(cat)
+              if (cat !== 'orientation') setRotationAngle(0)
+            }}
             activeDoc={activeDoc}
             onUpdateAdjustments={updateAdjustments}
             onApplyTransform={handleApplyTransform}
             onPreviewScaleChange={setPreviewScale}
+            rotationAngle={rotationAngle}
+            onRotateChange={setRotationAngle}
             cropProps={{
               isCropActive: crop.isCropActive,
               cropRect: crop.cropRect,

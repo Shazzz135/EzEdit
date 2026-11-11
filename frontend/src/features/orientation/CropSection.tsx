@@ -47,11 +47,12 @@ export const CropSection: React.FC<CropSectionProps> = ({
   }, [isCropActive, onApplyCrop, onCancelCrop])
 
   return (
-    <div className="flex flex-col gap-2.5 p-3 bg-[#171722] rounded-xl border border-[#242434]">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <Crop className="w-3.5 h-3.5 text-[#60A5FA]" />
-          <span className="text-xs font-semibold text-[#A0A0B2] uppercase tracking-wider">
+    <div className="flex flex-col gap-3 p-3.5 bg-[#161622] rounded-xl border border-[#252536] shadow-sm">
+      {/* Strong Header */}
+      <div className="flex items-center justify-between pb-2 border-b border-[#232332]">
+        <div className="flex items-center gap-2">
+          <Crop className="w-4 h-4 text-[#60A5FA]" />
+          <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">
             Crop
           </span>
         </div>
@@ -79,7 +80,7 @@ export const CropSection: React.FC<CropSectionProps> = ({
               onClick={() => onSelectRatio(opt.id)}
               className={`py-1.5 px-2 text-xs font-medium rounded-lg border transition-all cursor-pointer text-center ${
                 isSelected
-                  ? 'bg-[#2563EB]/25 border-[#3B82F6] text-[#60A5FA] font-semibold'
+                  ? 'bg-[#2563EB]/25 border-[#3B82F6] text-[#60A5FA] font-semibold shadow-xs'
                   : 'bg-[#12121A] border-[#242434] text-[#A0A0B2] hover:bg-[#1C1C28] hover:text-[#E0E0EC]'
               }`}
             >
@@ -91,33 +92,36 @@ export const CropSection: React.FC<CropSectionProps> = ({
 
       {/* Active Crop Controls & Readout */}
       {isCropActive && (
-        <div className="flex flex-col gap-2 pt-1 border-t border-[#222232]">
-          {cropRect && (
-            <div className="text-[11px] text-[#707080] font-mono text-center">
-              Selected: <span className="text-[#A0A0B8]">{Math.round(cropRect.width)} × {Math.round(cropRect.height)} px</span>
+        <>
+          <div className="border-t border-[#232332]" />
+          <div className="flex flex-col gap-2">
+            {cropRect && (
+              <div className="text-[11px] text-[#707080] font-mono text-center">
+                Selected: <span className="text-[#A0A0B8]">{Math.round(cropRect.width)} × {Math.round(cropRect.height)} px</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onCancelCrop}
+                className="flex-1 text-xs py-1.5 flex items-center justify-center gap-1"
+              >
+                <X className="w-3.5 h-3.5 text-[#60A5FA]" />
+                <span>Cancel</span>
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={onApplyCrop}
+                className="flex-1 text-xs py-1.5 flex items-center justify-center gap-1 bg-[#2563EB] hover:bg-[#1D4ED8]"
+              >
+                <Check className="w-3.5 h-3.5 text-[#60A5FA]" />
+                <span>Apply</span>
+              </Button>
             </div>
-          )}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onCancelCrop}
-              className="flex-1 text-xs py-1.5 flex items-center justify-center gap-1"
-            >
-              <X className="w-3.5 h-3.5 text-[#60A5FA]" />
-              <span>Cancel</span>
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onApplyCrop}
-              className="flex-1 text-xs py-1.5 flex items-center justify-center gap-1 bg-[#2563EB] hover:bg-[#1D4ED8]"
-            >
-              <Check className="w-3.5 h-3.5 text-[#60A5FA]" />
-              <span>Apply</span>
-            </Button>
           </div>
-        </div>
+        </>
       )}
     </div>
   )

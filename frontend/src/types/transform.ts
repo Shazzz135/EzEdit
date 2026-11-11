@@ -5,7 +5,7 @@ export interface TransformResult {
   height: number
 }
 
-export type RotateDegree = 90 | 180 | 270
+export type RotateDegree = number
 
 export type FlipDirection = 'horizontal' | 'vertical'
 

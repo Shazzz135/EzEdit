@@ -32,6 +32,8 @@ export interface ToolsPanelProps {
   cropProps?: CropPanelProps
   onApplyTransform?: (result: TransformResult) => void
   onPreviewScaleChange?: (scale: { x: number; y: number } | undefined) => void
+  rotationAngle?: number
+  onRotateChange?: (angle: number) => void
 }
 
 export const ToolsPanel: React.FC<ToolsPanelProps> = ({
@@ -42,6 +44,8 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   cropProps,
   onApplyTransform,
   onPreviewScaleChange,
+  rotationAngle,
+  onRotateChange,
 }) => {
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
@@ -61,6 +65,8 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
           <OrientationPanel
             document={activeDoc}
             cropProps={cropProps}
+            rotationAngle={rotationAngle ?? 0}
+            onRotateChange={onRotateChange ?? (() => {})}
             onApplyTransform={onApplyTransform}
             onPreviewScaleChange={onPreviewScaleChange}
           />

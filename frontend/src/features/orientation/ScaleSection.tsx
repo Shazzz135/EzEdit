@@ -28,11 +28,12 @@ export const ScaleSection: React.FC<ScaleSectionProps> = ({
   const isChanged = width !== currentWidth || height !== currentHeight
 
   return (
-    <div className="flex flex-col gap-2.5 p-3 bg-[#171722] rounded-xl border border-[#242434]">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <Maximize2 className="w-3.5 h-3.5 text-[#60A5FA]" />
-          <span className="text-xs font-semibold text-[#A0A0B2] uppercase tracking-wider">
+    <div className="flex flex-col gap-3 p-3.5 bg-[#161622] rounded-xl border border-[#252536] shadow-sm">
+      {/* Strong Header */}
+      <div className="flex items-center justify-between pb-2 border-b border-[#232332]">
+        <div className="flex items-center gap-2">
+          <Maximize2 className="w-4 h-4 text-[#60A5FA]" />
+          <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">
             Scale(px)
           </span>
         </div>
@@ -80,11 +81,13 @@ export const ScaleSection: React.FC<ScaleSectionProps> = ({
         </div>
       </div>
 
+      <div className="border-t border-[#232332]" />
+
       <Button
         variant="primary"
         onClick={onApplyScale}
         disabled={!isChanged || isProcessing}
-        className="w-full mt-0.5 py-1.5 text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8]"
+        className="w-full py-1.5 text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8]"
       >
         {isProcessing ? 'Scaling...' : 'Apply Scale'}
       </Button>

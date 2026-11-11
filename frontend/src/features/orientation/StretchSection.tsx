@@ -30,11 +30,12 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
   const projectedH = Math.max(1, Math.round(currentHeight * (scaleY / 100)))
 
   return (
-    <div className="flex flex-col gap-2.5 p-3 bg-[#171722] rounded-xl border border-[#242434]">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <SlidersHorizontal className="w-3.5 h-3.5 text-[#60A5FA]" />
-          <span className="text-xs font-semibold text-[#A0A0B2] uppercase tracking-wider">
+    <div className="flex flex-col gap-3 p-3.5 bg-[#161622] rounded-xl border border-[#252536] shadow-sm">
+      {/* Strong Header */}
+      <div className="flex items-center justify-between pb-2 border-b border-[#232332]">
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="w-4 h-4 text-[#60A5FA]" />
+          <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">
             Stretch
           </span>
         </div>
@@ -45,7 +46,7 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
             className="text-[11px] text-[#707086] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
           >
             <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
-            <span>Reset</span>
+            <span>Reset (100%)</span>
           </button>
         )}
       </div>
@@ -54,7 +55,7 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
       <div className="flex flex-col gap-1">
         <div className="flex justify-between items-center text-[10px] text-[#808096]">
           <span>SCALE X</span>
-          <span className="font-mono text-[#E0E0EC]">{scaleX}%</span>
+          <span className="font-mono text-[#60A5FA] font-semibold">{scaleX}%</span>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -81,7 +82,7 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
       <div className="flex flex-col gap-1">
         <div className="flex justify-between items-center text-[10px] text-[#808096]">
           <span>SCALE Y</span>
-          <span className="font-mono text-[#E0E0EC]">{scaleY}%</span>
+          <span className="font-mono text-[#60A5FA] font-semibold">{scaleY}%</span>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -104,16 +105,18 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
         </div>
       </div>
 
-      {/* Target Preview */}
-      <div className="text-[11px] text-[#707080] font-mono text-center py-0.5">
-        Target: <span className="text-[#A0A0B8]">{projectedW} × {projectedH} px</span>
+      <div className="border-t border-[#232332]" />
+
+      {/* Target Preview Readout */}
+      <div className="text-[11px] text-[#707080] font-mono text-center">
+        Target: <span className="text-[#A0A0B8] font-semibold">{projectedW} × {projectedH} px</span>
       </div>
 
       <Button
         variant="primary"
         onClick={onApplyStretch}
         disabled={!isChanged || isProcessing}
-        className="w-full mt-0.5 py-1.5 text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8]"
+        className="w-full py-1.5 text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8]"
       >
         {isProcessing ? 'Stretching...' : 'Apply Stretch'}
       </Button>
