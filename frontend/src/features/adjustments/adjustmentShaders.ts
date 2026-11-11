@@ -32,10 +32,26 @@ uniform float u_sharpness;
 uniform float u_definition;
 uniform float u_noise;
 
+uniform int u_filterPreset;
+uniform float u_filterIntensity;
+uniform float u_splitPosition;
+uniform int u_compareOriginal;
+
 void main() {
   vec4 base = texture(u_image, v_texCoord);
   if (base.a <= 0.0) {
     outColor = vec4(0.0);
+    return;
+  }
+
+  // 0. Hold-to-compare or Split comparison left side
+  if (u_compareOriginal == 1 || (u_splitPosition >= 0.0 && v_texCoord.x < u_splitPosition)) {
+    outColor = base;
+    return;
+  }
+  // Optional 1px split divider line
+  if (u_splitPosition >= 0.0 && abs(v_texCoord.x - u_splitPosition) < (1.25 / max(u_resolution.x, 1.0))) {
+    outColor = vec4(1.0, 1.0, 1.0, 1.0);
     return;
   }
 
@@ -69,10 +85,8 @@ void main() {
   // 3. Contrast
   color = (color - 0.5) * (1.0 + u_contrast / 100.0) + 0.5;
 
-  // 4. Luminance calculations for highlights, shadows & brilliance
+  // 4. Highlights, Shadows & Brilliance
   float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
-
-  // Highlights & Shadows
   if (u_highlights != 0.0) {
     float hWeight = smoothstep(0.35, 1.0, lum);
     color += color * (u_highlights / 100.0) * hWeight * 0.5;
@@ -81,8 +95,6 @@ void main() {
     float sWeight = 1.0 - smoothstep(0.0, 0.65, lum);
     color += (1.0 - color) * (u_shadows / 100.0) * sWeight * 0.5;
   }
-
-  // Brilliance (adaptive midtones curve)
   if (u_brilliance != 0.0) {
     float bWeight = sin(clamp(lum, 0.0, 1.0) * 3.14159265);
     color += vec3((u_brilliance / 100.0) * bWeight * 0.25);
@@ -91,7 +103,6 @@ void main() {
   // 5. Saturation & Vibrance
   lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
   color = mix(vec3(lum), color, max(0.0, 1.0 + u_saturation / 100.0));
-
   if (u_vibrance != 0.0) {
     float maxC = max(color.r, max(color.g, color.b));
     float minC = min(color.r, min(color.g, color.b));
@@ -99,16 +110,53 @@ void main() {
     color = mix(vec3(lum), color, max(0.0, 1.0 + (u_vibrance / 100.0) * (1.0 - sat)));
   }
 
-  // 6. Warmth (Color Temp: +Amber / -Cyan)
+  // 6. Warmth & Tint
   color.r += (u_warmth / 100.0) * 0.15;
   color.b -= (u_warmth / 100.0) * 0.15;
-
-  // 7. Tint (+Green / -Magenta)
   color.g += (u_tint / 100.0) * 0.15;
   color.r -= (u_tint / 100.0) * 0.075;
   color.b -= (u_tint / 100.0) * 0.075;
 
   color = clamp(color, 0.0, 1.0);
+
+  // 7. Preset Filter Grading & Intensity Blending
+  if (u_filterPreset > 0 && u_filterIntensity > 0.0) {
+    vec3 f = color;
+    if (u_filterPreset == 1) { // Vivid
+      f = (f - 0.5) * 1.25 + 0.5;
+      float l = dot(f, vec3(0.2126, 0.7152, 0.0722));
+      f = mix(vec3(l), f, 1.35);
+      f.r += 0.04;
+    } else if (u_filterPreset == 2) { // Warm
+      f.r += 0.08; f.g += 0.02; f.b -= 0.08;
+      f = (f - 0.5) * 1.08 + 0.5;
+    } else if (u_filterPreset == 3) { // Cool
+      f.b += 0.10; f.g += 0.03; f.r -= 0.06;
+      f = (f - 0.5) * 1.06 + 0.5;
+    } else if (u_filterPreset == 4) { // Dramatic
+      f = (f - 0.5) * 1.45 + 0.5;
+      float l = dot(f, vec3(0.2126, 0.7152, 0.0722));
+      f = mix(vec3(l), f, 0.75);
+    } else if (u_filterPreset == 5) { // Heavy Warm
+      f.r += 0.16; f.g += 0.06; f.b -= 0.14;
+      float l = dot(f, vec3(0.2126, 0.7152, 0.0722));
+      f = mix(vec3(l), f, 1.15);
+    } else if (u_filterPreset == 6) { // Heavy Cool
+      f.b += 0.18; f.g += 0.05; f.r -= 0.12;
+      f = (f - 0.5) * 1.12 + 0.5;
+    } else if (u_filterPreset == 7) { // Mono
+      float l = dot(f, vec3(0.299, 0.587, 0.114));
+      l = (l - 0.5) * 1.15 + 0.5;
+      f = vec3(clamp(l, 0.0, 1.0));
+    } else if (u_filterPreset == 8) { // Noir
+      float l = dot(f, vec3(0.2126, 0.7152, 0.0722));
+      l = pow(clamp(l, 0.0, 1.0), 1.35) * 1.25;
+      l = (l - 0.5) * 1.5 + 0.5;
+      f = vec3(clamp(l, 0.0, 1.0));
+    }
+    color = mix(color, clamp(f, 0.0, 1.0), clamp(u_filterIntensity, 0.0, 1.0));
+  }
+
   outColor = vec4(color * base.a, base.a);
 }
 `

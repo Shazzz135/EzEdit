@@ -2,8 +2,9 @@ import React from 'react'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { OrientationPanel } from '@/features/orientation'
 import { AdjustmentsPanel } from '@/features/adjustments'
+import { FiltersPanel } from '@/features/filters'
 import { type CropPanelProps } from '@/features/crop/CropPanel'
-import { type DocumentState, type AdjustmentValues } from '@/types/document'
+import { type DocumentState, type AdjustmentValues, type FilterState } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
 import { Crop, Sliders, Wand2, Brush, Scissors, Sparkles } from 'lucide-react'
 
@@ -30,11 +31,20 @@ export interface ToolsPanelProps {
   activeDoc?: DocumentState
   onUpdateAdjustments: (id: string, partial: Partial<AdjustmentValues>) => void
   onResetAdjustments?: (id: string) => void
+  onUpdateFilter?: (id: string, partial: Partial<FilterState>) => void
+  onResetFilter?: (id: string) => void
   cropProps?: CropPanelProps
   onApplyTransform?: (result: TransformResult) => void
   onPreviewScaleChange?: (scale: { x: number; y: number } | undefined) => void
   rotationAngle?: number
   onRotateChange?: (angle: number) => void
+  splitActive?: boolean
+  onToggleSplit?: () => void
+  splitPosition?: number
+  onChangeSplitPosition?: (pos: number) => void
+  isHoldComparing?: boolean
+  onHoldCompareStart?: () => void
+  onHoldCompareEnd?: () => void
 }
 
 export const ToolsPanel: React.FC<ToolsPanelProps> = ({
@@ -43,11 +53,20 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   activeDoc,
   onUpdateAdjustments,
   onResetAdjustments,
+  onUpdateFilter,
+  onResetFilter,
   cropProps,
   onApplyTransform,
   onPreviewScaleChange,
   rotationAngle,
   onRotateChange,
+  splitActive = false,
+  onToggleSplit = () => {},
+  splitPosition = 0.5,
+  onChangeSplitPosition = () => {},
+  isHoldComparing = false,
+  onHoldCompareStart = () => {},
+  onHoldCompareEnd = () => {},
 }) => {
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
@@ -82,11 +101,26 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
           />
         )}
 
-        {activeDoc && activeCategory !== 'orientation' && activeCategory !== 'adjustments' && (
+        {activeDoc && activeCategory === 'filters' && (
+          <FiltersPanel
+            filter={activeDoc.filter}
+            onChangeFilter={(partial) => onUpdateFilter?.(activeDoc.id, partial)}
+            onResetFilter={() => onResetFilter?.(activeDoc.id)}
+            splitActive={splitActive}
+            onToggleSplit={onToggleSplit}
+            splitPosition={splitPosition}
+            onChangeSplitPosition={onChangeSplitPosition}
+            isHoldComparing={isHoldComparing}
+            onHoldCompareStart={onHoldCompareStart}
+            onHoldCompareEnd={onHoldCompareEnd}
+          />
+        )}
+
+        {activeDoc && activeCategory !== 'orientation' && activeCategory !== 'adjustments' && activeCategory !== 'filters' && (
           <div className="flex flex-col items-center justify-center p-6 text-center text-[#707080] text-xs">
             <span>
               {TOOL_CATEGORIES.find((c) => c.id === activeCategory)?.label} tools will activate in Milestone{' '}
-              {activeCategory === 'filters' ? 5 : activeCategory === 'selection' ? 6 : activeCategory === 'retouch' ? 7 : 8}
+              {activeCategory === 'selection' ? 6 : activeCategory === 'retouch' ? 7 : 8}
             </span>
           </div>
         )}

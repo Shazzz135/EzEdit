@@ -7,19 +7,22 @@ import { TabBar } from '@/features/tabs/TabBar'
 import { CanvasViewport } from '@/features/canvas/CanvasViewport'
 import { useCropState, CropOverlay, executeCrop } from '@/features/crop'
 import { RotateHandle } from '@/features/orientation'
+import { useImageImport } from '@/features/canvas/useImageImport'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { useDocumentPersistence } from '@/features/tabs/useDocumentPersistence'
 import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts'
-import { MAX_IMPORT_DIMENSION, MAX_TAB_LIMIT } from '@/types/document'
+import { MAX_TAB_LIMIT } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
 
 export const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('adjustments')
   const [tabLimitModalOpen, setTabLimitModalOpen] = useState(false)
-  const [oversizedFile, setOversizedFile] = useState<{ file: File; width: number; height: number } | null>(null)
   const [unsavedDoc, setUnsavedDoc] = useState<{ id: string; name: string } | null>(null)
   const [previewScale, setPreviewScale] = useState<{ x: number; y: number } | undefined>(undefined)
   const [rotationAngle, setRotationAngle] = useState(0)
+  const [splitActive, setSplitActive] = useState(false)
+  const [splitPosition, setSplitPosition] = useState(0.5)
+  const [isHoldComparing, setIsHoldComparing] = useState(false)
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
 
   const { quotaWarning, dismissQuotaWarning } = useDocumentPersistence()
@@ -30,16 +33,18 @@ export const App: React.FC = () => {
     getActiveDocument,
     updateAdjustments,
     resetAdjustments,
+    updateFilter,
+    resetFilter,
     closeDocument,
-    addDocument,
     applyRasterTransform,
     undo,
     redo,
   } = useDocumentStore()
   const activeDoc = getActiveDocument()
   const crop = useCropState()
+  const { oversizedFile, setOversizedFile, handleDropFile, handleDownscaleAndImport } =
+    useImageImport(() => setTabLimitModalOpen(true))
 
-  // Undo/Redo keyboard shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z)
   useUndoRedoShortcuts(activeDoc, undo, redo)
 
   const handleApplyTransform = (result: TransformResult) => {
@@ -61,66 +66,6 @@ export const App: React.FC = () => {
     } catch (err) {
       console.error('Failed to apply crop:', err)
     }
-  }
-
-  const handleDownscaleAndImport = () => {
-    if (!oversizedFile) return
-    const { file, width, height } = oversizedFile
-    const scale = MAX_IMPORT_DIMENSION / Math.max(width, height)
-    const targetW = Math.round(width * scale)
-    const targetH = Math.round(height * scale)
-
-    const img = new Image()
-    const url = URL.createObjectURL(file)
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = targetW
-      canvas.height = targetH
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, targetW, targetH)
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const downscaledUrl = URL.createObjectURL(blob)
-            addDocument({
-              name: file.name,
-              originalWidth: targetW,
-              originalHeight: targetH,
-              currentWidth: targetW,
-              currentHeight: targetH,
-              imageSrc: downscaledUrl,
-              imageBlob: blob,
-            })
-          }
-          URL.revokeObjectURL(url)
-        }, file.type || 'image/png')
-      }
-    }
-    img.src = url
-    setOversizedFile(null)
-  }
-
-  const handleDropFile = (file: File) => {
-    const objectUrl = URL.createObjectURL(file)
-    const img = new Image()
-    img.onload = () => {
-      const { naturalWidth: width, naturalHeight: height } = img
-      if (width > MAX_IMPORT_DIMENSION || height > MAX_IMPORT_DIMENSION) {
-        setOversizedFile({ file, width, height })
-        URL.revokeObjectURL(objectUrl)
-        return
-      }
-      addDocument({
-        name: file.name,
-        originalWidth: width,
-        originalHeight: height,
-        currentWidth: width,
-        currentHeight: height,
-        imageSrc: objectUrl,
-        imageBlob: file,
-      })
-    }
-    img.src = objectUrl
   }
 
   const canUndo = !!(activeDoc && activeDoc.historyIndex > 0)
@@ -168,12 +113,15 @@ export const App: React.FC = () => {
             onDropImage={handleDropFile}
             previewScale={previewScale}
             rotationAngle={rotationAngle}
+            splitActive={splitActive}
+            splitPosition={splitPosition}
+            onChangeSplitPosition={setSplitPosition}
+            isHoldComparing={isHoldComparing}
+            onHoldCompareChange={setIsHoldComparing}
+            onToggleSplit={() => setSplitActive((v) => !v)}
             rotateOverlay={
               activeDoc && activeCategory === 'orientation' && !crop.isCropActive ? (
-                <RotateHandle
-                  rotationAngle={rotationAngle}
-                  onRotateChange={setRotationAngle}
-                />
+                <RotateHandle rotationAngle={rotationAngle} onRotateChange={setRotationAngle} />
               ) : undefined
             }
             isPrecisionToolActive={crop.isCropActive}
@@ -204,6 +152,15 @@ export const App: React.FC = () => {
             activeDoc={activeDoc}
             onUpdateAdjustments={updateAdjustments}
             onResetAdjustments={resetAdjustments}
+            onUpdateFilter={updateFilter}
+            onResetFilter={resetFilter}
+            splitActive={splitActive}
+            onToggleSplit={() => setSplitActive((v) => !v)}
+            splitPosition={splitPosition}
+            onChangeSplitPosition={setSplitPosition}
+            isHoldComparing={isHoldComparing}
+            onHoldCompareStart={() => setIsHoldComparing(true)}
+            onHoldCompareEnd={() => setIsHoldComparing(false)}
             onApplyTransform={handleApplyTransform}
             onPreviewScaleChange={setPreviewScale}
             rotationAngle={rotationAngle}

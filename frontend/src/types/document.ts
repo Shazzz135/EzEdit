@@ -46,6 +46,27 @@ export const defaultOrientation: OrientationValues = {
   scaleY: 1.0,
 }
 
+export type PresetFilterType =
+  | 'none'
+  | 'vivid'
+  | 'warm'
+  | 'cool'
+  | 'dramatic'
+  | 'heavy-warm'
+  | 'heavy-cool'
+  | 'mono'
+  | 'noir'
+
+export interface FilterState {
+  preset: PresetFilterType
+  intensity: number      // 0 to 100, default 100
+}
+
+export const defaultFilterState: FilterState = {
+  preset: 'none',
+  intensity: 100,
+}
+
 export interface DocumentHistoryEntry {
   imageSrc: string
   imageBlob?: Blob
@@ -53,6 +74,7 @@ export interface DocumentHistoryEntry {
   height: number
   adjustments: AdjustmentValues
   orientation: OrientationValues
+  filter: FilterState
 }
 
 export interface DocumentState {
@@ -68,6 +90,7 @@ export interface DocumentState {
   isModified: boolean
   adjustments: AdjustmentValues
   orientation: OrientationValues
+  filter: FilterState
   history: DocumentHistoryEntry[]
   historyIndex: number
   createdAt: number

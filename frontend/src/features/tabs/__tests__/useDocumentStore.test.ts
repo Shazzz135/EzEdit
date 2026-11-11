@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useDocumentStore } from '../useDocumentStore'
-import { MAX_TAB_LIMIT, defaultAdjustments, defaultOrientation } from '@/types/document'
+import { MAX_TAB_LIMIT, defaultAdjustments, defaultOrientation, defaultFilterState } from '@/types/document'
 
 describe('useDocumentStore Multi-Document Tab Manager', () => {
   beforeEach(() => {
@@ -159,6 +159,7 @@ describe('useDocumentStore Multi-Document Tab Manager', () => {
         isModified: false,
         adjustments: { ...defaultAdjustments, exposure: 0.5 },
         orientation: { ...defaultOrientation },
+        filter: { ...defaultFilterState },
         history: [],
         historyIndex: 0,
         createdAt: 100,
@@ -175,6 +176,7 @@ describe('useDocumentStore Multi-Document Tab Manager', () => {
         isModified: true,
         adjustments: { ...defaultAdjustments, exposure: -1.0 },
         orientation: { ...defaultOrientation },
+        filter: { ...defaultFilterState },
         history: [],
         historyIndex: 0,
         createdAt: 300,
