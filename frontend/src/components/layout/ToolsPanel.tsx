@@ -1,8 +1,10 @@
 import React from 'react'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { PrecisionSlider } from '@/components/ui/PrecisionSlider'
-import { CropPanel, type CropPanelProps } from '@/features/crop/CropPanel'
+import { OrientationPanel } from '@/features/orientation'
+import { type CropPanelProps } from '@/features/crop/CropPanel'
 import { type DocumentState, type AdjustmentValues } from '@/types/document'
+import { type TransformResult } from '@/types/transform'
 import { Crop, Sliders, Wand2, Brush, Scissors, Sparkles } from 'lucide-react'
 
 export type ToolCategory =
@@ -28,6 +30,8 @@ export interface ToolsPanelProps {
   activeDoc?: DocumentState
   onUpdateAdjustments: (id: string, partial: Partial<AdjustmentValues>) => void
   cropProps?: CropPanelProps
+  onApplyTransform?: (result: TransformResult) => void
+  onPreviewScaleChange?: (scale: { x: number; y: number } | undefined) => void
 }
 
 export const ToolsPanel: React.FC<ToolsPanelProps> = ({
@@ -36,6 +40,8 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   activeDoc,
   onUpdateAdjustments,
   cropProps,
+  onApplyTransform,
+  onPreviewScaleChange,
 }) => {
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
@@ -51,8 +57,13 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
 
       {/* Category Content Pane */}
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
-        {activeDoc && activeCategory === 'orientation' && cropProps && (
-          <CropPanel {...cropProps} />
+        {activeDoc && activeCategory === 'orientation' && cropProps && onApplyTransform && (
+          <OrientationPanel
+            document={activeDoc}
+            cropProps={cropProps}
+            onApplyTransform={onApplyTransform}
+            onPreviewScaleChange={onPreviewScaleChange}
+          />
         )}
 
         {activeDoc && activeCategory === 'adjustments' && (

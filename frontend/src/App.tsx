@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
 import { ToolsPanel, type ToolCategory } from '@/components/layout/ToolsPanel'
 import { WorkspaceModals } from '@/components/layout/WorkspaceModals'
@@ -8,13 +8,16 @@ import { CanvasViewport } from '@/features/canvas/CanvasViewport'
 import { useCropState, CropOverlay, executeCrop } from '@/features/crop'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { useDocumentPersistence } from '@/features/tabs/useDocumentPersistence'
+import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts'
 import { MAX_IMPORT_DIMENSION, MAX_TAB_LIMIT } from '@/types/document'
+import { type TransformResult } from '@/types/transform'
 
 export const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('adjustments')
   const [tabLimitModalOpen, setTabLimitModalOpen] = useState(false)
   const [oversizedFile, setOversizedFile] = useState<{ file: File; width: number; height: number } | null>(null)
   const [unsavedDoc, setUnsavedDoc] = useState<{ id: string; name: string } | null>(null)
+  const [previewScale, setPreviewScale] = useState<{ x: number; y: number } | undefined>(undefined)
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
 
   const { quotaWarning, dismissQuotaWarning } = useDocumentPersistence()
@@ -34,43 +37,23 @@ export const App: React.FC = () => {
   const crop = useCropState()
 
   // Undo/Redo keyboard shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z)
-  useEffect(() => {
-    const handleUndoRedo = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
-        if (e.key === 'z' || e.key === 'Z') {
-          if (e.shiftKey) {
-            e.preventDefault()
-            if (activeDoc && activeDoc.history && activeDoc.historyIndex < activeDoc.history.length - 1) {
-              redo(activeDoc.id)
-            }
-          } else {
-            e.preventDefault()
-            if (activeDoc && activeDoc.historyIndex > 0) {
-              undo(activeDoc.id)
-            }
-          }
-        } else if (e.key === 'y' || e.key === 'Y') {
-          e.preventDefault()
-          if (activeDoc && activeDoc.history && activeDoc.historyIndex < activeDoc.history.length - 1) {
-            redo(activeDoc.id)
-          }
-        }
-      }
-    }
-    window.addEventListener('keydown', handleUndoRedo)
-    return () => window.removeEventListener('keydown', handleUndoRedo)
-  }, [activeDoc, undo, redo])
+  useUndoRedoShortcuts(activeDoc, undo, redo)
+
+  const handleApplyTransform = (result: TransformResult) => {
+    if (!activeDoc) return
+    applyRasterTransform(activeDoc.id, {
+      url: result.url,
+      blob: result.blob,
+      width: result.width,
+      height: result.height,
+    })
+  }
 
   const handleApplyCrop = async () => {
     if (!activeDoc || !crop.cropRect) return
     try {
       const result = await executeCrop(activeDoc.imageSrc, crop.cropRect)
-      applyRasterTransform(activeDoc.id, {
-        url: result.url,
-        blob: result.blob,
-        width: result.width,
-        height: result.height,
-      })
+      handleApplyTransform(result)
       crop.cancelCrop()
     } catch (err) {
       console.error('Failed to apply crop:', err)
@@ -182,6 +165,7 @@ export const App: React.FC = () => {
           <CanvasViewport
             document={activeDoc}
             onDropImage={handleDropFile}
+            previewScale={previewScale}
             isPrecisionToolActive={crop.isCropActive}
             cropOverlay={
               activeDoc && crop.isCropActive && crop.cropRect
@@ -206,6 +190,8 @@ export const App: React.FC = () => {
             onSelectCategory={setActiveCategory}
             activeDoc={activeDoc}
             onUpdateAdjustments={updateAdjustments}
+            onApplyTransform={handleApplyTransform}
+            onPreviewScaleChange={setPreviewScale}
             cropProps={{
               isCropActive: crop.isCropActive,
               cropRect: crop.cropRect,

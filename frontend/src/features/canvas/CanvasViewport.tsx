@@ -9,6 +9,7 @@ export interface CanvasViewportProps {
   onZoomChange?: (scale: number) => void
   cropOverlay?: (scale: number) => React.ReactNode
   isPrecisionToolActive?: boolean
+  previewScale?: { x: number; y: number }
 }
 
 export const CanvasViewport: React.FC<CanvasViewportProps> = ({
@@ -16,6 +17,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   onDropImage,
   cropOverlay,
   isPrecisionToolActive: isPrecisionToolActiveProp,
+  previewScale,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const panZoom = useCanvasPanZoom()
@@ -47,9 +49,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     }
 
     container.addEventListener('wheel', onWheel, { passive: false })
-    return () => {
-      container.removeEventListener('wheel', onWheel)
-    }
+    return () => container.removeEventListener('wheel', onWheel)
   }, [panZoom])
 
   // Keyboard spacebar listener for panning
@@ -186,8 +186,9 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           draggable={false}
           style={{
             imageRendering: panZoom.scale > 1.0 ? 'pixelated' : 'auto',
+            transform: previewScale ? `scale(${previewScale.x}, ${previewScale.y})` : undefined,
           }}
-          className="w-full h-full object-contain pointer-events-none"
+          className="w-full h-full object-contain pointer-events-none transition-transform duration-75"
         />
 
         {/* Pixel grid overlay above 800% zoom */}
