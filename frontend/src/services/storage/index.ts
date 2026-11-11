@@ -1,0 +1,16 @@
+export {
+  ezEditStore,
+  saveDocumentBlob,
+  getDocumentBlob,
+  saveDocumentMeta,
+  getDocumentMeta,
+  saveSession,
+  getSession,
+  deleteDocument,
+  clearAllStorage,
+  checkStorageQuota,
+  loadAllDocuments,
+  type StoredDocumentMeta,
+  type StoredSession,
+  type StorageQuotaEstimate,
+} from './indexedDbService'

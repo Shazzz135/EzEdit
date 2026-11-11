@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useDocumentStore } from '../useDocumentStore'
-import { MAX_TAB_LIMIT } from '@/types/document'
+import { MAX_TAB_LIMIT, defaultAdjustments, defaultOrientation } from '@/types/document'
 
 describe('useDocumentStore Multi-Document Tab Manager', () => {
   beforeEach(() => {
@@ -143,5 +143,44 @@ describe('useDocumentStore Multi-Document Tab Manager', () => {
     store.closeDocument(d1.id!)
     expect(useDocumentStore.getState().documents).toHaveLength(0)
     expect(useDocumentStore.getState().activeDocumentId).toBeNull()
+  })
+
+  it('hydrates documents and preserves active document from storage', () => {
+    const store = useDocumentStore.getState()
+    const mockDocs = [
+      {
+        id: 'restored_1',
+        name: 'restored1.png',
+        originalWidth: 500,
+        originalHeight: 500,
+        currentWidth: 500,
+        currentHeight: 500,
+        imageSrc: 'blob:restored1',
+        isModified: false,
+        adjustments: { ...defaultAdjustments, exposure: 0.5 },
+        orientation: { ...defaultOrientation },
+        createdAt: 100,
+        updatedAt: 200,
+      },
+      {
+        id: 'restored_2',
+        name: 'restored2.png',
+        originalWidth: 600,
+        originalHeight: 600,
+        currentWidth: 600,
+        currentHeight: 600,
+        imageSrc: 'blob:restored2',
+        isModified: true,
+        adjustments: { ...defaultAdjustments, exposure: -1.0 },
+        orientation: { ...defaultOrientation },
+        createdAt: 300,
+        updatedAt: 400,
+      },
+    ]
+
+    store.setHydratedDocuments(mockDocs, 'restored_2')
+    expect(useDocumentStore.getState().documents).toHaveLength(2)
+    expect(useDocumentStore.getState().activeDocumentId).toBe('restored_2')
+    expect(useDocumentStore.getState().getActiveDocument()?.name).toBe('restored2.png')
   })
 })

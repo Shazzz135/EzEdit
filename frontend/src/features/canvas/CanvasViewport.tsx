@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback } from 'react'
 import { useCanvasPanZoom } from './useCanvasPanZoom'
 import { type DocumentState } from '@/types/document'
-import { Maximize2, RotateCcw } from 'lucide-react'
+import { Maximize2, RotateCcw, Plus } from 'lucide-react'
 
 export interface CanvasViewportProps {
   document?: DocumentState
@@ -97,6 +97,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   }
 
   const zoomPercent = Math.round(panZoom.scale * 100)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const isHighZoom = panZoom.scale >= 8.0 // >= 800% show pixel grid
 
   if (!activeDoc) {
@@ -106,12 +107,32 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         onDrop={handleDrop}
         className="w-full h-full flex flex-col items-center justify-center p-6 text-center select-none"
       >
-        <div className="w-16 h-16 rounded-full border border-dashed border-[#2E2E3E] flex items-center justify-center mb-3 text-[#606070]">
-          📁
-        </div>
-        <h3 className="text-sm font-medium text-[#C8C8D4] mb-1">
-          Drop an image here or click + above
-        </h3>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file && onDropImage) onDropImage(file)
+            e.target.value = ''
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="group flex flex-col items-center justify-center p-8 border-2 border-dashed border-[#2E2E3E] hover:border-[#60A5FA] bg-[#161622]/70 hover:bg-[#1A1A2A] rounded-2xl transition-all cursor-pointer mb-3 shadow-lg hover:shadow-[#60A5FA]/10"
+        >
+          <div className="w-14 h-14 rounded-full bg-[#20202E] group-hover:bg-[#2563EB]/20 flex items-center justify-center mb-3 text-[#9090A0] group-hover:text-[#60A5FA] transition-colors border border-[#2D2D3E] group-hover:border-[#3B82F6]/50">
+            <Plus className="w-7 h-7" />
+          </div>
+          <span className="text-sm font-semibold text-[#E0E0EC] group-hover:text-white flex items-center gap-1.5">
+            Import Image
+          </span>
+          <span className="text-xs text-[#707080] mt-1">
+            Click to browse or drag & drop image
+          </span>
+        </button>
         <p className="text-xs text-[#707080] max-w-xs">
           Supports PNG, JPEG, WebP. Multi-tab editing supports up to 6 documents simultaneously.
         </p>

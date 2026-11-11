@@ -18,6 +18,7 @@ export interface DocumentStore {
   updateAdjustments: (id: string, partial: Partial<AdjustmentValues>) => void
   resetAdjustments: (id: string) => void
   updateOrientation: (id: string, partial: Partial<OrientationValues>) => void
+  setHydratedDocuments: (docs: DocumentState[], activeId: string | null) => void
   clearAllDocuments: () => void
 }
 
@@ -132,6 +133,13 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
           : doc
       ),
     }))
+  },
+
+  setHydratedDocuments: (docs, activeId) => {
+    set({
+      documents: docs,
+      activeDocumentId: activeId ?? (docs[0]?.id || null),
+    })
   },
 
   clearAllDocuments: () => {
