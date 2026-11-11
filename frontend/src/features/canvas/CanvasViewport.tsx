@@ -7,11 +7,13 @@ export interface CanvasViewportProps {
   document?: DocumentState
   onDropImage?: (file: File) => void
   onZoomChange?: (scale: number) => void
+  cropOverlay?: (scale: number) => React.ReactNode
 }
 
 export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   document: activeDoc,
   onDropImage,
+  cropOverlay,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const panZoom = useCanvasPanZoom()
@@ -189,6 +191,9 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             className="absolute inset-0 pointer-events-none"
           />
         )}
+
+        {/* Dynamic Tool Overlays (e.g. Crop) */}
+        {cropOverlay && cropOverlay(panZoom.scale)}
       </div>
 
       {/* Floating Zoom & Fit Controls (Bottom Left) */}

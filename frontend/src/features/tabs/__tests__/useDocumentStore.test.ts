@@ -159,6 +159,8 @@ describe('useDocumentStore Multi-Document Tab Manager', () => {
         isModified: false,
         adjustments: { ...defaultAdjustments, exposure: 0.5 },
         orientation: { ...defaultOrientation },
+        history: [],
+        historyIndex: 0,
         createdAt: 100,
         updatedAt: 200,
       },
@@ -173,6 +175,8 @@ describe('useDocumentStore Multi-Document Tab Manager', () => {
         isModified: true,
         adjustments: { ...defaultAdjustments, exposure: -1.0 },
         orientation: { ...defaultOrientation },
+        history: [],
+        historyIndex: 0,
         createdAt: 300,
         updatedAt: 400,
       },
@@ -182,5 +186,50 @@ describe('useDocumentStore Multi-Document Tab Manager', () => {
     expect(useDocumentStore.getState().documents).toHaveLength(2)
     expect(useDocumentStore.getState().activeDocumentId).toBe('restored_2')
     expect(useDocumentStore.getState().getActiveDocument()?.name).toBe('restored2.png')
+  })
+
+  it('records raster transforms (such as crop) and supports undo and redo', () => {
+    const store = useDocumentStore.getState()
+    const doc = store.addDocument({
+      name: 'uncropped.png',
+      originalWidth: 1920,
+      originalHeight: 1080,
+      currentWidth: 1920,
+      currentHeight: 1080,
+      imageSrc: 'blob:uncropped',
+    })
+    const docId = doc.id!
+
+    // Apply crop raster transform
+    const mockBlob = new Blob(['cropped-data'])
+    store.applyRasterTransform(docId, {
+      url: 'blob:cropped-url',
+      blob: mockBlob,
+      width: 800,
+      height: 600,
+    })
+
+    const croppedDoc = store.getActiveDocument()
+    expect(croppedDoc?.currentWidth).toBe(800)
+    expect(croppedDoc?.currentHeight).toBe(600)
+    expect(croppedDoc?.imageSrc).toBe('blob:cropped-url')
+    expect(croppedDoc?.isModified).toBe(true)
+    expect(croppedDoc?.historyIndex).toBe(1)
+
+    // Undo crop
+    store.undo(docId)
+    const undoneDoc = store.getActiveDocument()
+    expect(undoneDoc?.currentWidth).toBe(1920)
+    expect(undoneDoc?.currentHeight).toBe(1080)
+    expect(undoneDoc?.imageSrc).toBe('blob:uncropped')
+    expect(undoneDoc?.historyIndex).toBe(0)
+
+    // Redo crop
+    store.redo(docId)
+    const redoneDoc = store.getActiveDocument()
+    expect(redoneDoc?.currentWidth).toBe(800)
+    expect(redoneDoc?.currentHeight).toBe(600)
+    expect(redoneDoc?.imageSrc).toBe('blob:cropped-url')
+    expect(redoneDoc?.historyIndex).toBe(1)
   })
 })

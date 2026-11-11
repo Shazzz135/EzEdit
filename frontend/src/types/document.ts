@@ -46,6 +46,15 @@ export const defaultOrientation: OrientationValues = {
   scaleY: 1.0,
 }
 
+export interface DocumentHistoryEntry {
+  imageSrc: string
+  imageBlob?: Blob
+  width: number
+  height: number
+  adjustments: AdjustmentValues
+  orientation: OrientationValues
+}
+
 export interface DocumentState {
   id: string
   name: string
@@ -59,6 +68,8 @@ export interface DocumentState {
   isModified: boolean
   adjustments: AdjustmentValues
   orientation: OrientationValues
+  history: DocumentHistoryEntry[]
+  historyIndex: number
   createdAt: number
   updatedAt: number
 }

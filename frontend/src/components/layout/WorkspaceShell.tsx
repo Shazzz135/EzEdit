@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
+import { Plus } from 'lucide-react'
 import { Header, type HeaderProps } from './Header'
 import { PermanentAdSlot } from './PermanentAdSlot'
 
@@ -83,7 +84,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
           {canvasContent || (
             <div className="flex flex-col items-center justify-center p-6 text-center">
               <div className="w-16 h-16 rounded-full border border-dashed border-[#2E2E3E] flex items-center justify-center mb-3 text-[#606070]">
-                📁
+                <Plus className="w-6 h-6 text-[#60A5FA]" />
               </div>
               <h3 className="text-sm font-medium text-[#C8C8D4] mb-1">
                 Drop an image here or click Import

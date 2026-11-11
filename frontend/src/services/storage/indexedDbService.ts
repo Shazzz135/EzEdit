@@ -113,6 +113,15 @@ export async function loadAllDocuments(): Promise<{
         ...meta,
         imageSrc,
         imageBlob: blob,
+        history: [{
+          imageSrc,
+          imageBlob: blob,
+          width: meta.currentWidth,
+          height: meta.currentHeight,
+          adjustments: meta.adjustments,
+          orientation: meta.orientation,
+        }],
+        historyIndex: 0,
       })
     }
   }
