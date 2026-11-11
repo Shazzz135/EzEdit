@@ -1,5 +1,6 @@
 export * from './OrientationPanel'
-export * from './ResizeSection'
+export * from './CropSection'
+export * from './ScaleSection'
 export * from './StretchSection'
 export * from './transformMath'
 export * from './transformService'

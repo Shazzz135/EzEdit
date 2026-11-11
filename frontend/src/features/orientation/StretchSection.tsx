@@ -1,5 +1,5 @@
 import React from 'react'
-import { RotateCcw } from 'lucide-react'
+import { SlidersHorizontal, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 export interface StretchSectionProps {
@@ -32,17 +32,20 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
   return (
     <div className="flex flex-col gap-2.5 p-3 bg-[#171722] rounded-xl border border-[#242434]">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-[#A0A0B2] uppercase tracking-wider">
-          Bilinear Stretch
-        </span>
+        <div className="flex items-center gap-1.5">
+          <SlidersHorizontal className="w-3.5 h-3.5 text-[#60A5FA]" />
+          <span className="text-xs font-semibold text-[#A0A0B2] uppercase tracking-wider">
+            Stretch
+          </span>
+        </div>
         {isChanged && (
           <button
             type="button"
             onClick={onResetStretch}
             className="text-[11px] text-[#707086] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
           >
-            <RotateCcw className="w-3 h-3" />
-            <span>Reset (100%)</span>
+            <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
+            <span>Reset</span>
           </button>
         )}
       </div>
@@ -101,7 +104,7 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
         </div>
       </div>
 
-      {/* Projected Dimension Preview */}
+      {/* Target Preview */}
       <div className="text-[11px] text-[#707080] font-mono text-center py-0.5">
         Target: <span className="text-[#A0A0B8]">{projectedW} × {projectedH} px</span>
       </div>
@@ -110,7 +113,7 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
         variant="primary"
         onClick={onApplyStretch}
         disabled={!isChanged || isProcessing}
-        className="w-full mt-1 py-1.5 text-xs font-semibold"
+        className="w-full mt-0.5 py-1.5 text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8]"
       >
         {isProcessing ? 'Stretching...' : 'Apply Stretch'}
       </Button>

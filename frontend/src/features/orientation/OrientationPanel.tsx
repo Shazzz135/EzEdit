@@ -5,13 +5,14 @@ import {
   RefreshCw,
   FlipHorizontal,
   FlipVertical,
-  Crop as CropIcon,
 } from 'lucide-react'
 import { type DocumentState } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
-import { CropPanel, type CropPanelProps } from '@/features/crop/CropPanel'
+import { type AspectRatio } from '@/types/crop'
+import { type CropPanelProps } from '@/features/crop/CropPanel'
 import { useTransformState } from './useTransformState'
-import { ResizeSection } from './ResizeSection'
+import { CropSection } from './CropSection'
+import { ScaleSection } from './ScaleSection'
 import { StretchSection } from './StretchSection'
 import {
   executeRotate,
@@ -43,9 +44,11 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
     onPreviewScaleChange?.(transform.previewScale)
   }, [transform.previewScale, onPreviewScaleChange])
 
-  // If interactive crop mode is active, render crop interface
-  if (cropProps.isCropActive) {
-    return <CropPanel {...cropProps} />
+  const handleRatioSelect = (ratio: AspectRatio) => {
+    if (!cropProps.isCropActive) {
+      cropProps.onStartCrop()
+    }
+    cropProps.onSelectRatio(ratio)
   }
 
   const handleRotate = async (degrees: 90 | 180 | 270) => {
@@ -72,7 +75,7 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
     }
   }
 
-  const handleApplyResize = async () => {
+  const handleApplyScale = async () => {
     try {
       transform.setIsProcessing(true)
       const res = await executeResize(
@@ -82,7 +85,7 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
       )
       onApplyTransform(res)
     } catch (err) {
-      console.error('Failed to resize canvas:', err)
+      console.error('Failed to scale canvas:', err)
     } finally {
       transform.setIsProcessing(false)
     }
@@ -107,28 +110,33 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
 
   return (
     <div className="flex flex-col gap-3 pb-4">
-      {/* Interactive Crop Mode Launcher */}
-      <button
-        type="button"
-        onClick={cropProps.onStartCrop}
-        className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#2563EB]/20 to-[#3B82F6]/10 border border-[#3B82F6]/40 hover:border-[#3B82F6] text-[#E0E0EC] hover:text-white flex items-center justify-center gap-2 font-medium text-xs transition-all cursor-pointer shadow-md"
-      >
-        <CropIcon className="w-4 h-4 text-[#60A5FA]" />
-        <span>Open Interactive Crop</span>
-      </button>
+      {/* Block 1: Crop */}
+      <CropSection
+        isCropActive={cropProps.isCropActive}
+        cropRect={cropProps.cropRect}
+        aspectRatio={cropProps.aspectRatio}
+        onSelectRatio={handleRatioSelect}
+        onApplyCrop={cropProps.onApplyCrop}
+        onCancelCrop={cropProps.onCancelCrop}
+        onResetCrop={cropProps.onResetCrop}
+      />
 
-      {/* Rotation & Flipping Controls */}
-      <div className="flex flex-col gap-2 p-3 bg-[#171722] rounded-xl border border-[#242434]">
-        <span className="text-xs font-semibold text-[#A0A0B2] uppercase tracking-wider">
-          Rotate & Flip
-        </span>
+      {/* Block 2: Rotate & Flip */}
+      <div className="flex flex-col gap-2.5 p-3 bg-[#171722] rounded-xl border border-[#242434]">
+        <div className="flex items-center gap-1.5">
+          <RotateCw className="w-3.5 h-3.5 text-[#60A5FA]" />
+          <span className="text-xs font-semibold text-[#A0A0B2] uppercase tracking-wider">
+            Rotate & Flip
+          </span>
+        </div>
+
         <div className="grid grid-cols-3 gap-1.5">
           <button
             type="button"
             onClick={() => handleRotate(270)}
             disabled={transform.isProcessing}
             title="Rotate 90° Counter-Clockwise"
-            className="flex flex-col items-center justify-center p-2 rounded-lg bg-[#14141E] hover:bg-[#20202E] border border-[#2A2A3A] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1 transition-all cursor-pointer"
+            className="flex flex-col items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1 transition-all cursor-pointer"
           >
             <RotateCcw className="w-4 h-4 text-[#60A5FA]" />
             <span>90° CCW</span>
@@ -138,7 +146,7 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
             onClick={() => handleRotate(90)}
             disabled={transform.isProcessing}
             title="Rotate 90° Clockwise"
-            className="flex flex-col items-center justify-center p-2 rounded-lg bg-[#14141E] hover:bg-[#20202E] border border-[#2A2A3A] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1 transition-all cursor-pointer"
+            className="flex flex-col items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1 transition-all cursor-pointer"
           >
             <RotateCw className="w-4 h-4 text-[#60A5FA]" />
             <span>90° CW</span>
@@ -148,9 +156,9 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
             onClick={() => handleRotate(180)}
             disabled={transform.isProcessing}
             title="Rotate 180°"
-            className="flex flex-col items-center justify-center p-2 rounded-lg bg-[#14141E] hover:bg-[#20202E] border border-[#2A2A3A] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1 transition-all cursor-pointer"
+            className="flex flex-col items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1 transition-all cursor-pointer"
           >
-            <RefreshCw className="w-4 h-4 text-[#A78BFA]" />
+            <RefreshCw className="w-4 h-4 text-[#60A5FA]" />
             <span>180°</span>
           </button>
         </div>
@@ -161,9 +169,9 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
             onClick={() => handleFlip('horizontal')}
             disabled={transform.isProcessing}
             title="Flip Horizontal (Mirror)"
-            className="flex items-center justify-center p-2 rounded-lg bg-[#14141E] hover:bg-[#20202E] border border-[#2A2A3A] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
+            className="flex items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
           >
-            <FlipHorizontal className="w-4 h-4 text-[#34D399]" />
+            <FlipHorizontal className="w-4 h-4 text-[#60A5FA]" />
             <span>Flip H</span>
           </button>
           <button
@@ -171,30 +179,28 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
             onClick={() => handleFlip('vertical')}
             disabled={transform.isProcessing}
             title="Flip Vertical"
-            className="flex items-center justify-center p-2 rounded-lg bg-[#14141E] hover:bg-[#20202E] border border-[#2A2A3A] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
+            className="flex items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
           >
-            <FlipVertical className="w-4 h-4 text-[#34D399]" />
+            <FlipVertical className="w-4 h-4 text-[#60A5FA]" />
             <span>Flip V</span>
           </button>
         </div>
       </div>
 
-      {/* Canvas Resize */}
-      <ResizeSection
+      {/* Block 3: Scale(px) */}
+      <ScaleSection
         width={transform.resizeWidth}
         height={transform.resizeHeight}
-        lockAspectRatio={transform.lockAspectRatio}
         currentWidth={doc.currentWidth}
         currentHeight={doc.currentHeight}
         onWidthChange={transform.handleWidthChange}
         onHeightChange={transform.handleHeightChange}
-        onToggleLock={transform.toggleLockAspectRatio}
-        onApplyResize={handleApplyResize}
-        onResetResize={transform.resetResize}
+        onApplyScale={handleApplyScale}
+        onResetScale={transform.resetResize}
         isProcessing={transform.isProcessing}
       />
 
-      {/* Bilinear Stretch */}
+      {/* Block 4: Stretch */}
       <StretchSection
         scaleX={transform.stretchX}
         scaleY={transform.stretchY}

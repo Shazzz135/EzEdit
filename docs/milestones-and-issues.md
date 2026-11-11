@@ -90,3 +90,12 @@ This document establishes the official traceable roadmap and issue breakdown for
 |---|---|---|
 | [#24](https://github.com/Shazzz135/EzEdit/issues/24) | **Issue 8.1: Pollinations.ai Keyless Generative AI Integration** | Blocked by #23 |
 | [#25](https://github.com/Shazzz135/EzEdit/issues/25) | **Issue 8.2: Multi-Format High-Resolution Export Engine** (PNG, JPEG, WebP) | Blocked by #24 |
+
+---
+
+## Feature Requests & Workflow Enhancements
+
+| Issue | Title | Status | Dependencies / Notes |
+|---|---|---|---|
+| [#32](https://github.com/Shazzz135/EzEdit/issues/32) | **[FEAT]: Copy Edits Between Image Tabs with Dropdown Category Selection** | Open | Multi-tab workflow enhancement with category select/deselect |
+
