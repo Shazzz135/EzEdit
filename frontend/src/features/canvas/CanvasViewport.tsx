@@ -12,6 +12,7 @@ export interface CanvasViewportProps {
   onZoomChange?: (scale: number) => void
   cropOverlay?: (scale: number) => React.ReactNode
   rotateOverlay?: React.ReactNode
+  selectionOverlay?: (scale: number) => React.ReactNode
   isPrecisionToolActive?: boolean
   previewScale?: { x: number; y: number }
   rotationAngle?: number
@@ -28,6 +29,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   onDropImage,
   cropOverlay,
   rotateOverlay,
+  selectionOverlay,
   isPrecisionToolActive: isPrecisionToolActiveProp,
   previewScale,
   rotationAngle,
@@ -40,7 +42,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const panZoom = useCanvasPanZoom()
-  const isPrecisionToolActive = isPrecisionToolActiveProp ?? !!cropOverlay
+  const isPrecisionToolActive = isPrecisionToolActiveProp ?? (!!cropOverlay || !!selectionOverlay)
 
   const fitToScreen = panZoom.fitToScreen
   const docId = activeDoc?.id
@@ -181,6 +183,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
 
         {rotateOverlay}
         {cropOverlay && cropOverlay(panZoom.scale)}
+        {selectionOverlay && selectionOverlay(panZoom.scale)}
       </div>
 
       {/* Floating Viewport Controls (Bottom Left) */}
