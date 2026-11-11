@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
 import { TabBar } from '@/features/tabs/TabBar'
+import { CanvasViewport } from '@/features/canvas/CanvasViewport'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { PrecisionSlider } from '@/components/ui/PrecisionSlider'
 import { Button } from '@/components/ui/Button'
@@ -124,15 +125,34 @@ export const App: React.FC = () => {
     </div>
   )
 
-  const canvasViewport = activeDoc ? (
-    <div className="relative w-full h-full flex items-center justify-center p-4 overflow-hidden">
-      <img
-        src={activeDoc.imageSrc}
-        alt={activeDoc.name}
-        className="max-w-full max-h-full object-contain shadow-2xl rounded-[2px]"
-      />
-    </div>
-  ) : undefined
+  const handleDropFile = (file: File) => {
+    const objectUrl = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const { naturalWidth: width, naturalHeight: height } = img
+      if (width > MAX_IMPORT_DIMENSION || height > MAX_IMPORT_DIMENSION) {
+        setOversizedFile({ file, width, height })
+        URL.revokeObjectURL(objectUrl)
+        return
+      }
+      addDocument({
+        name: file.name,
+        originalWidth: width,
+        originalHeight: height,
+        currentWidth: width,
+        currentHeight: height,
+        imageSrc: objectUrl,
+      })
+    }
+    img.src = objectUrl
+  }
+
+  const canvasViewport = (
+    <CanvasViewport
+      document={activeDoc}
+      onDropImage={handleDropFile}
+    />
+  )
 
   return (
     <>
