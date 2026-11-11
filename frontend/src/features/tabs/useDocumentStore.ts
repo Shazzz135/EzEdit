@@ -3,8 +3,10 @@ import {
   type DocumentState,
   type AdjustmentValues,
   type OrientationValues,
+  type FilterState,
   defaultAdjustments,
   defaultOrientation,
+  defaultFilterState,
   MAX_TAB_LIMIT,
 } from '@/types/document'
 
@@ -12,13 +14,15 @@ export interface DocumentStore {
   documents: DocumentState[]
   activeDocumentId: string | null
   getActiveDocument: () => DocumentState | undefined
-  addDocument: (doc: Omit<DocumentState, 'id' | 'createdAt' | 'updatedAt' | 'adjustments' | 'orientation' | 'isModified' | 'history' | 'historyIndex'>) => { success: boolean; id?: string; error?: 'MAX_TABS_EXCEEDED' }
+  addDocument: (doc: Omit<DocumentState, 'id' | 'createdAt' | 'updatedAt' | 'adjustments' | 'orientation' | 'filter' | 'isModified' | 'history' | 'historyIndex'>) => { success: boolean; id?: string; error?: 'MAX_TABS_EXCEEDED' }
   closeDocument: (id: string) => void
   setActiveDocument: (id: string) => void
   renameDocument: (id: string, name: string) => void
   updateAdjustments: (id: string, partial: Partial<AdjustmentValues>) => void
   resetAdjustments: (id: string) => void
   updateOrientation: (id: string, partial: Partial<OrientationValues>) => void
+  updateFilter: (id: string, partial: Partial<FilterState>) => void
+  resetFilter: (id: string) => void
   applyRasterTransform: (id: string, newImage: { url: string; blob: Blob; width: number; height: number }) => void
   undo: (id: string) => void
   redo: (id: string) => void
@@ -37,10 +41,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
 
   addDocument: (docData) => {
     const { documents } = get()
-
-    if (documents.length >= MAX_TAB_LIMIT) {
-      return { success: false, error: 'MAX_TABS_EXCEEDED' }
-    }
+    if (documents.length >= MAX_TAB_LIMIT) return { success: false, error: 'MAX_TABS_EXCEEDED' }
 
     const newId = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
     const initialEntry = {
@@ -50,6 +51,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       height: docData.currentHeight,
       adjustments: { ...defaultAdjustments },
       orientation: { ...defaultOrientation },
+      filter: { ...defaultFilterState },
     }
     const newDoc: DocumentState = {
       ...docData,
@@ -57,48 +59,34 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       isModified: false,
       adjustments: { ...defaultAdjustments },
       orientation: { ...defaultOrientation },
+      filter: { ...defaultFilterState },
       history: [initialEntry],
       historyIndex: 0,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
 
-    // Append new tab to the right side of the list and activate it
-    set((state) => ({
-      documents: [...state.documents, newDoc],
-      activeDocumentId: newId,
-    }))
-
+    set((state) => ({ documents: [...state.documents, newDoc], activeDocumentId: newId }))
     return { success: true, id: newId }
   },
 
   closeDocument: (id) => {
     const { documents, activeDocumentId } = get()
     const targetDoc = documents.find((d) => d.id === id)
-
-    // Revoke blob URL if created locally
-    if (targetDoc && targetDoc.imageSrc.startsWith('blob:')) {
-      URL.revokeObjectURL(targetDoc.imageSrc)
-    }
+    if (targetDoc && targetDoc.imageSrc.startsWith('blob:')) URL.revokeObjectURL(targetDoc.imageSrc)
 
     const nextDocuments = documents.filter((doc) => doc.id !== id)
     let nextActiveId = activeDocumentId
 
-    // If the currently active document is being closed, activate adjacent tab
     if (activeDocumentId === id) {
       if (nextDocuments.length === 0) {
         nextActiveId = null
       } else {
         const closedIndex = documents.findIndex((doc) => doc.id === id)
-        const newIndex = Math.min(closedIndex, nextDocuments.length - 1)
-        nextActiveId = nextDocuments[newIndex].id
+        nextActiveId = nextDocuments[Math.min(closedIndex, nextDocuments.length - 1)].id
       }
     }
-
-    set({
-      documents: nextDocuments,
-      activeDocumentId: nextActiveId,
-    })
+    set({ documents: nextDocuments, activeDocumentId: nextActiveId })
   },
 
   setActiveDocument: (id) => set({ activeDocumentId: id }),
@@ -107,46 +95,46 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     const trimmed = name.trim()
     if (!trimmed) return
     set((state) => ({
-      documents: state.documents.map((doc) =>
-        doc.id === id ? { ...doc, name: trimmed, updatedAt: Date.now() } : doc
-      ),
+      documents: state.documents.map((d) => d.id === id ? { ...d, name: trimmed, updatedAt: Date.now() } : d),
     }))
   },
 
   updateAdjustments: (id, partial) => {
     set((state) => ({
-      documents: state.documents.map((doc) =>
-        doc.id === id
-          ? {
-              ...doc,
-              adjustments: { ...doc.adjustments, ...partial },
-              isModified: true,
-              updatedAt: Date.now(),
-            }
-          : doc
+      documents: state.documents.map((d) =>
+        d.id === id ? { ...d, adjustments: { ...d.adjustments, ...partial }, isModified: true, updatedAt: Date.now() } : d
       ),
     }))
   },
 
   resetAdjustments: (id) => {
     set((state) => ({
-      documents: state.documents.map((doc) =>
-        doc.id === id ? { ...doc, adjustments: { ...defaultAdjustments }, updatedAt: Date.now() } : doc
+      documents: state.documents.map((d) =>
+        d.id === id ? { ...d, adjustments: { ...defaultAdjustments }, updatedAt: Date.now() } : d
       ),
     }))
   },
 
   updateOrientation: (id, partial) => {
     set((state) => ({
-      documents: state.documents.map((doc) =>
-        doc.id === id
-          ? {
-              ...doc,
-              orientation: { ...doc.orientation, ...partial },
-              isModified: true,
-              updatedAt: Date.now(),
-            }
-          : doc
+      documents: state.documents.map((d) =>
+        d.id === id ? { ...d, orientation: { ...d.orientation, ...partial }, isModified: true, updatedAt: Date.now() } : d
+      ),
+    }))
+  },
+
+  updateFilter: (id, partial) => {
+    set((state) => ({
+      documents: state.documents.map((d) =>
+        d.id === id ? { ...d, filter: { ...d.filter, ...partial }, isModified: true, updatedAt: Date.now() } : d
+      ),
+    }))
+  },
+
+  resetFilter: (id) => {
+    set((state) => ({
+      documents: state.documents.map((d) =>
+        d.id === id ? { ...d, filter: { ...defaultFilterState }, updatedAt: Date.now() } : d
       ),
     }))
   },
@@ -163,6 +151,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
           height: newImage.height,
           adjustments: { ...doc.adjustments },
           orientation: { ...doc.orientation },
+          filter: { ...doc.filter },
         }
         return {
           ...doc,
@@ -220,6 +209,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   setHydratedDocuments: (docs, activeId) => {
     const formatted = docs.map((doc) => ({
       ...doc,
+      filter: doc.filter || { ...defaultFilterState },
       history: doc.history?.length ? doc.history : [{
         imageSrc: doc.imageSrc,
         imageBlob: doc.imageBlob,
@@ -227,6 +217,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         height: doc.currentHeight,
         adjustments: { ...doc.adjustments },
         orientation: { ...doc.orientation },
+        filter: { ...defaultFilterState },
       }],
       historyIndex: doc.historyIndex ?? 0,
     }))

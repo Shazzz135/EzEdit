@@ -3,6 +3,8 @@ import {
   type DocumentState,
   type AdjustmentValues,
   type OrientationValues,
+  type FilterState,
+  defaultFilterState,
 } from '@/types/document'
 
 export const ezEditStore = createStore('ezedit_db', 'documents')
@@ -18,6 +20,7 @@ export interface StoredDocumentMeta {
   isModified: boolean
   adjustments: AdjustmentValues
   orientation: OrientationValues
+  filter: FilterState
   createdAt: number
   updatedAt: number
 }
@@ -109,10 +112,12 @@ export async function loadAllDocuments(): Promise<{
 
     if (meta && blob) {
       const imageSrc = URL.createObjectURL(blob)
+      const filterState = meta.filter || { ...defaultFilterState }
       documents.push({
         ...meta,
         imageSrc,
         imageBlob: blob,
+        filter: filterState,
         history: [{
           imageSrc,
           imageBlob: blob,
@@ -120,6 +125,7 @@ export async function loadAllDocuments(): Promise<{
           height: meta.currentHeight,
           adjustments: meta.adjustments,
           orientation: meta.orientation,
+          filter: filterState,
         }],
         historyIndex: 0,
       })

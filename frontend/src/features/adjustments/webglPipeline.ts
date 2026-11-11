@@ -1,5 +1,6 @@
-import { type AdjustmentValues } from '@/types/document'
+import { type AdjustmentValues, type FilterState } from '@/types/document'
 import { VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE } from './adjustmentShaders'
+import { PRESET_SHADER_MAP } from '@/features/filters/filterPresets'
 
 export class WebGLAdjustmentPipeline {
   private gl: WebGL2RenderingContext
@@ -39,7 +40,8 @@ export class WebGLAdjustmentPipeline {
       'u_image', 'u_resolution', 'u_exposure', 'u_brilliance',
       'u_highlights', 'u_shadows', 'u_contrast', 'u_brightness',
       'u_saturation', 'u_vibrance', 'u_warmth', 'u_tint',
-      'u_sharpness', 'u_definition', 'u_noise'
+      'u_sharpness', 'u_definition', 'u_noise',
+      'u_filterPreset', 'u_filterIntensity', 'u_splitPosition', 'u_compareOriginal',
     ]
 
     for (const name of uniformNames) {
@@ -67,8 +69,6 @@ export class WebGLAdjustmentPipeline {
     this.vao = gl.createVertexArray()
     gl.bindVertexArray(this.vao)
 
-    // Full screen quad with UVs: [pos.x, pos.y, uv.x, uv.y]
-    // WebGL textures have origin at lower-left, canvas images at top-left.
     const quadVertices = new Float32Array([
       -1, -1, 0, 1,
        1, -1, 1, 1,
@@ -87,18 +87,14 @@ export class WebGLAdjustmentPipeline {
 
     gl.enableVertexAttribArray(aPos)
     gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 16, 0)
-
     gl.enableVertexAttribArray(aTex)
     gl.vertexAttribPointer(aTex, 2, gl.FLOAT, false, 16, 8)
-
     gl.bindVertexArray(null)
   }
 
   public setTexture(image: HTMLImageElement | ImageBitmap) {
     const gl = this.gl
-    if (!this.texture) {
-      this.texture = gl.createTexture()
-    }
+    if (!this.texture) this.texture = gl.createTexture()
 
     gl.bindTexture(gl.TEXTURE_2D, this.texture)
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
@@ -115,7 +111,14 @@ export class WebGLAdjustmentPipeline {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
   }
 
-  public render(adjustments: AdjustmentValues, width: number, height: number) {
+  public render(
+    adjustments: AdjustmentValues,
+    width: number,
+    height: number,
+    filter?: FilterState,
+    splitPosition?: number | null,
+    isHoldComparing?: boolean
+  ) {
     const gl = this.gl
     if (!this.program || !this.texture || !this.vao) return
 
@@ -141,6 +144,14 @@ export class WebGLAdjustmentPipeline {
     gl.uniform1f(this.uniforms['u_sharpness'], adjustments.sharpness)
     gl.uniform1f(this.uniforms['u_definition'], adjustments.definition)
     gl.uniform1f(this.uniforms['u_noise'], adjustments.noise)
+
+    // Bind filter & comparison uniforms
+    const presetIndex = filter ? PRESET_SHADER_MAP[filter.preset] ?? 0 : 0
+    const intensity = filter ? filter.intensity / 100.0 : 1.0
+    gl.uniform1i(this.uniforms['u_filterPreset'], presetIndex)
+    gl.uniform1f(this.uniforms['u_filterIntensity'], intensity)
+    gl.uniform1f(this.uniforms['u_splitPosition'], splitPosition != null ? splitPosition : -1.0)
+    gl.uniform1i(this.uniforms['u_compareOriginal'], isHoldComparing ? 1 : 0)
 
     gl.bindVertexArray(this.vao)
     gl.drawArrays(gl.TRIANGLES, 0, 6)

@@ -108,6 +108,7 @@ export function useDocumentPersistence(): UseDocumentPersistenceReturn {
           isModified: doc.isModified,
           adjustments: doc.adjustments,
           orientation: doc.orientation,
+          filter: doc.filter,
           createdAt: doc.createdAt,
           updatedAt: doc.updatedAt,
         })

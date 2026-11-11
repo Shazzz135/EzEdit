@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react'
-import { type AdjustmentValues } from '@/types/document'
+import { type AdjustmentValues, type FilterState } from '@/types/document'
 import { WebGLAdjustmentPipeline } from './webglPipeline'
 
 export interface WebGLCanvasProps {
@@ -7,6 +7,9 @@ export interface WebGLCanvasProps {
   width: number
   height: number
   adjustments: AdjustmentValues
+  filter?: FilterState
+  splitPosition?: number | null
+  isHoldComparing?: boolean
   className?: string
   style?: React.CSSProperties
 }
@@ -16,6 +19,9 @@ export const WebGLCanvas: React.FC<WebGLCanvasProps> = ({
   width,
   height,
   adjustments,
+  filter,
+  splitPosition,
+  isHoldComparing,
   className,
   style,
 }) => {
@@ -64,17 +70,17 @@ export const WebGLCanvas: React.FC<WebGLCanvasProps> = ({
     img.onload = () => {
       imageRef.current = img
       pipeline.setTexture(img)
-      pipeline.render(adjustments, width, height)
+      pipeline.render(adjustments, width, height, filter, splitPosition, isHoldComparing)
     }
     img.src = imageSrc
-  }, [imageSrc, isSupported, width, height, adjustments])
+  }, [imageSrc, isSupported, width, height, adjustments, filter, splitPosition, isHoldComparing])
 
-  // Real-time 60fps render when adjustments or dimensions change
+  // Real-time 60fps render when adjustments, filter or split compare change
   useEffect(() => {
     const pipeline = pipelineRef.current
     if (!pipeline || !imageRef.current || !isSupported) return
-    pipeline.render(adjustments, width, height)
-  }, [adjustments, width, height, isSupported])
+    pipeline.render(adjustments, width, height, filter, splitPosition, isHoldComparing)
+  }, [adjustments, filter, splitPosition, isHoldComparing, width, height, isSupported])
 
   if (!isSupported) {
     return (

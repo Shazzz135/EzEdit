@@ -12,7 +12,7 @@ import {
   loadAllDocuments,
   type StoredDocumentMeta,
 } from '../indexedDbService'
-import { defaultAdjustments, defaultOrientation } from '@/types/document'
+import { defaultAdjustments, defaultOrientation, defaultFilterState } from '@/types/document'
 
 // Mock in-memory database store for idb-keyval
 const inMemoryStore = new Map<string, unknown>()
@@ -60,6 +60,7 @@ describe('indexedDbService', () => {
       isModified: true,
       adjustments: { ...defaultAdjustments, exposure: 1.5 },
       orientation: { ...defaultOrientation, rotation: 90 },
+      filter: { ...defaultFilterState },
       createdAt: 1000,
       updatedAt: 2000,
     }
@@ -98,6 +99,7 @@ describe('indexedDbService', () => {
       isModified: false,
       adjustments: { ...defaultAdjustments },
       orientation: { ...defaultOrientation },
+      filter: { ...defaultFilterState },
       createdAt: 1000,
       updatedAt: 1000,
     }
@@ -135,6 +137,7 @@ describe('indexedDbService', () => {
       isModified: false,
       adjustments: { ...defaultAdjustments },
       orientation: { ...defaultOrientation },
+      filter: { ...defaultFilterState },
       createdAt: 500,
       updatedAt: 600,
     }
