@@ -1,21 +1,23 @@
 import React, { useState, useRef } from 'react'
 import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
-import { ToolsPanel, type ToolCategory } from '@/components/layout/ToolsPanel'
+import { ToolsPanel } from '@/components/layout/ToolsPanel'
 import { WorkspaceModals } from '@/components/layout/WorkspaceModals'
 import { MobileDocumentSelector } from '@/components/layout/MobileDocumentSelector'
 import { TabBar } from '@/features/tabs/TabBar'
 import { CanvasViewport } from '@/features/canvas/CanvasViewport'
 import { useCropState, CropOverlay, executeCrop } from '@/features/crop'
 import { RotateHandle } from '@/features/orientation'
+import { useSelectionState, SelectionOverlay, copySelection, cutSelection } from '@/features/selection'
 import { useImageImport } from '@/features/canvas/useImageImport'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { useDocumentPersistence } from '@/features/tabs/useDocumentPersistence'
 import { useUndoRedoShortcuts } from '@/hooks/useUndoRedoShortcuts'
+import { usePersistedToolCategory } from '@/hooks/usePersistedToolCategory'
 import { MAX_TAB_LIMIT } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
 
 export const App: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState<ToolCategory>('adjustments')
+  const [activeCategory, setActiveCategory] = usePersistedToolCategory()
   const [tabLimitModalOpen, setTabLimitModalOpen] = useState(false)
   const [unsavedDoc, setUnsavedDoc] = useState<{ id: string; name: string } | null>(null)
   const [previewScale, setPreviewScale] = useState<{ x: number; y: number } | undefined>(undefined)
@@ -42,6 +44,7 @@ export const App: React.FC = () => {
   } = useDocumentStore()
   const activeDoc = getActiveDocument()
   const crop = useCropState()
+  const selection = useSelectionState(activeCategory === 'selection', { onCopy: () => handleCopySelection(), onCut: () => handleCutSelection() })
   const { oversizedFile, setOversizedFile, handleDropFile, handleDownscaleAndImport } =
     useImageImport(() => setTabLimitModalOpen(true))
 
@@ -65,6 +68,20 @@ export const App: React.FC = () => {
       crop.cancelCrop()
     } catch (err) {
       console.error('Failed to apply crop:', err)
+    }
+  }
+
+  const handleCopySelection = async () => {
+    if (!activeDoc || !selection.state.hasSelection) return
+    await copySelection(activeDoc.imageSrc, selection.state.paths, selection.state.inverted, selection.state.feather)
+  }
+
+  const handleCutSelection = async () => {
+    if (!activeDoc || !selection.state.hasSelection) return
+    const cutRes = await cutSelection(activeDoc.imageSrc, selection.state.paths, selection.state.inverted, selection.state.feather)
+    if (cutRes) {
+      handleApplyTransform({ url: cutRes.newImageUrl, blob: cutRes.newImageBlob, width: cutRes.width, height: cutRes.height })
+      selection.clearSelection()
     }
   }
 
@@ -124,7 +141,21 @@ export const App: React.FC = () => {
                 <RotateHandle rotationAngle={rotationAngle} onRotateChange={setRotationAngle} />
               ) : undefined
             }
-            isPrecisionToolActive={crop.isCropActive}
+            selectionOverlay={
+              activeDoc && activeCategory === 'selection'
+                ? (scale) => (
+                    <SelectionOverlay
+                      imageWidth={activeDoc.currentWidth}
+                      imageHeight={activeDoc.currentHeight}
+                      zoomScale={scale}
+                      tool={selection.state.tool}
+                      paths={selection.state.paths}
+                      onCommitPath={selection.commitPath}
+                    />
+                  )
+                : undefined
+            }
+            isPrecisionToolActive={crop.isCropActive || activeCategory === 'selection'}
             cropOverlay={
               activeDoc && crop.isCropActive && crop.cropRect
                 ? (scale) => (
@@ -165,6 +196,16 @@ export const App: React.FC = () => {
             onPreviewScaleChange={setPreviewScale}
             rotationAngle={rotationAngle}
             onRotateChange={setRotationAngle}
+            selectionProps={{
+              state: selection.state,
+              onSelectTool: selection.setTool,
+              onSelectMode: selection.setMode,
+              onChangeFeather: selection.setFeather,
+              onToggleInvert: selection.toggleInvert,
+              onClearSelection: selection.clearSelection,
+              onCopySelection: handleCopySelection,
+              onCutSelection: handleCutSelection,
+            }}
             cropProps={{
               isCropActive: crop.isCropActive,
               cropRect: crop.cropRect,
@@ -194,7 +235,7 @@ export const App: React.FC = () => {
         onDownscaleAndImport={handleDownscaleAndImport}
         unsavedDoc={unsavedDoc}
         onKeepUnsavedDoc={() => setUnsavedDoc(null)}
-        onDiscardUnsavedDoc={() => { if (unsavedDoc) closeDocument(unsavedDoc.id); setUnsavedDoc(null); }}
+        onDiscardUnsavedDoc={() => { if (unsavedDoc) closeDocument(unsavedDoc.id); setUnsavedDoc(null) }}
         quotaWarning={quotaWarning}
         onDismissQuotaWarning={dismissQuotaWarning}
       />

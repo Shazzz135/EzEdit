@@ -3,6 +3,7 @@ import { Dropdown } from '@/components/ui/Dropdown'
 import { OrientationPanel } from '@/features/orientation'
 import { AdjustmentsPanel } from '@/features/adjustments'
 import { FiltersPanel } from '@/features/filters'
+import { SelectionPanel, type SelectionPanelProps } from '@/features/selection'
 import { type CropPanelProps } from '@/features/crop/CropPanel'
 import { type DocumentState, type AdjustmentValues, type FilterState } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
@@ -45,6 +46,7 @@ export interface ToolsPanelProps {
   isHoldComparing?: boolean
   onHoldCompareStart?: () => void
   onHoldCompareEnd?: () => void
+  selectionProps?: SelectionPanelProps
 }
 
 export const ToolsPanel: React.FC<ToolsPanelProps> = ({
@@ -67,6 +69,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   isHoldComparing = false,
   onHoldCompareStart = () => {},
   onHoldCompareEnd = () => {},
+  selectionProps,
 }) => {
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
@@ -116,11 +119,15 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
           />
         )}
 
-        {activeDoc && activeCategory !== 'orientation' && activeCategory !== 'adjustments' && activeCategory !== 'filters' && (
+        {activeDoc && activeCategory === 'selection' && selectionProps && (
+          <SelectionPanel {...selectionProps} />
+        )}
+
+        {activeDoc && activeCategory !== 'orientation' && activeCategory !== 'adjustments' && activeCategory !== 'filters' && activeCategory !== 'selection' && (
           <div className="flex flex-col items-center justify-center p-6 text-center text-[#707080] text-xs">
             <span>
               {TOOL_CATEGORIES.find((c) => c.id === activeCategory)?.label} tools will activate in Milestone{' '}
-              {activeCategory === 'selection' ? 6 : activeCategory === 'retouch' ? 7 : 8}
+              {activeCategory === 'retouch' ? 7 : 8}
             </span>
           </div>
         )}
