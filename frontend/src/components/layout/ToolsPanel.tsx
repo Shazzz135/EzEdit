@@ -38,7 +38,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   cropProps,
 }) => {
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Category Dropdown Selector at Top */}
       <div className="p-2.5 border-b border-[#242430] bg-[#14141A] flex-shrink-0">
         <Dropdown
