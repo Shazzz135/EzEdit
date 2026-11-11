@@ -1,6 +1,5 @@
 import React from 'react'
 import { Maximize2, RotateCcw } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
 
 export interface ScaleSectionProps {
   width: number
@@ -9,24 +8,20 @@ export interface ScaleSectionProps {
   currentHeight: number
   onWidthChange: (w: number) => void
   onHeightChange: (h: number) => void
-  onApplyScale: () => void
   onResetScale: () => void
+  onCommitScale?: () => void
   isProcessing?: boolean
 }
 
 export const ScaleSection: React.FC<ScaleSectionProps> = ({
   width,
   height,
-  currentWidth,
-  currentHeight,
   onWidthChange,
   onHeightChange,
-  onApplyScale,
   onResetScale,
+  onCommitScale,
   isProcessing,
 }) => {
-  const isChanged = width !== currentWidth || height !== currentHeight
-
   return (
     <div className="flex flex-col gap-3">
       {/* Strong Header */}
@@ -37,15 +32,22 @@ export const ScaleSection: React.FC<ScaleSectionProps> = ({
             Scale(px)
           </span>
         </div>
-        <button
-          type="button"
-          onClick={onResetScale}
-          title="Reset Scale"
-          className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
-        >
-          <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
-          <span>Reset</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {isProcessing && (
+            <span className="text-[10px] text-[#60A5FA] font-mono animate-pulse">
+              Scaling...
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={onResetScale}
+            title="Reset Scale"
+            className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
+          >
+            <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
+            <span>Reset</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -60,6 +62,8 @@ export const ScaleSection: React.FC<ScaleSectionProps> = ({
             max={8192}
             value={width || ''}
             onChange={(e) => onWidthChange(parseInt(e.target.value, 10) || 1)}
+            onKeyDown={(e) => e.key === 'Enter' && onCommitScale?.()}
+            onBlur={() => onCommitScale?.()}
             className="w-full bg-[#12121C] border border-[#2A2A3C] focus:border-[#4B88E8] text-[#E0E0EC] font-mono text-xs px-2.5 py-1.5 rounded-lg outline-none"
           />
         </div>
@@ -75,21 +79,12 @@ export const ScaleSection: React.FC<ScaleSectionProps> = ({
             max={8192}
             value={height || ''}
             onChange={(e) => onHeightChange(parseInt(e.target.value, 10) || 1)}
+            onKeyDown={(e) => e.key === 'Enter' && onCommitScale?.()}
+            onBlur={() => onCommitScale?.()}
             className="w-full bg-[#12121C] border border-[#2A2A3C] focus:border-[#4B88E8] text-[#E0E0EC] font-mono text-xs px-2.5 py-1.5 rounded-lg outline-none"
           />
         </div>
       </div>
-
-      <div className="border-t border-[#222230]" />
-
-      <Button
-        variant="ghost"
-        onClick={onApplyScale}
-        disabled={!isChanged || isProcessing}
-        className="w-full py-1.5 text-xs font-semibold bg-[#1E1E2C] hover:bg-[#262638] text-[#60A5FA] border border-[#3B82F6]/60 disabled:opacity-40 disabled:border-[#2A2A3A] disabled:text-[#707080]"
-      >
-        {isProcessing ? 'Scaling...' : 'Apply Scale'}
-      </Button>
     </div>
   )
 }

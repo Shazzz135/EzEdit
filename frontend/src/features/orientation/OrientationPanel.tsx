@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useCallback } from 'react'
 import { type DocumentState } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
 import { type AspectRatio } from '@/types/crop'
@@ -37,7 +37,7 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
     currentHeight: doc.currentHeight,
   })
 
-  // Propagate real-time stretch preview scale to canvas
+  // Propagate real-time stretch and scale preview to canvas
   useEffect(() => {
     onPreviewScaleChange?.(transform.previewScale)
   }, [transform.previewScale, onPreviewScaleChange])
@@ -75,7 +75,13 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
     }
   }
 
-  const handleApplyScale = async () => {
+  const handleApplyScale = useCallback(async () => {
+    if (
+      transform.resizeWidth === doc.currentWidth &&
+      transform.resizeHeight === doc.currentHeight
+    ) {
+      return
+    }
     try {
       transform.setIsProcessing(true)
       const res = await executeResize(
@@ -85,11 +91,39 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
       )
       onApplyTransform(res)
     } catch (err) {
-      console.error('Failed to scale canvas:', err)
+      console.error('Failed to auto-scale canvas:', err)
     } finally {
       transform.setIsProcessing(false)
     }
-  }
+  }, [
+    doc.imageSrc,
+    doc.currentWidth,
+    doc.currentHeight,
+    transform,
+    onApplyTransform,
+  ])
+
+  // Auto-scale with debounce when dimensions change
+  useEffect(() => {
+    if (
+      transform.resizeWidth === doc.currentWidth &&
+      transform.resizeHeight === doc.currentHeight
+    ) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      handleApplyScale()
+    }, 700)
+
+    return () => clearTimeout(timer)
+  }, [
+    transform.resizeWidth,
+    transform.resizeHeight,
+    doc.currentWidth,
+    doc.currentHeight,
+    handleApplyScale,
+  ])
 
   const handleApplyStretch = async () => {
     try {
@@ -145,8 +179,8 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         currentHeight={doc.currentHeight}
         onWidthChange={transform.handleWidthChange}
         onHeightChange={transform.handleHeightChange}
-        onApplyScale={handleApplyScale}
         onResetScale={transform.resetResize}
+        onCommitScale={handleApplyScale}
         isProcessing={transform.isProcessing}
       />
 

@@ -24,12 +24,16 @@ describe('cropMath utilities and constraint engine', () => {
     expect(getAspectRatioValue('2:3', 1920, 1080)).toBeCloseTo(2 / 3)
   })
 
-  it('calculates centered initial crop for free ratio', () => {
+  it('calculates initial crop for free ratio filling full space', () => {
     const crop = calculateInitialCrop(1000, 800, 'free')
-    expect(crop.width).toBe(900)
-    expect(crop.height).toBe(720)
-    expect(crop.x).toBe(50)
-    expect(crop.y).toBe(40)
+    expect(crop.width).toBe(1000)
+    expect(crop.height).toBe(800)
+    expect(crop.x).toBe(0)
+    expect(crop.y).toBe(0)
+
+    // Specifically for 200x200, crops full 200x200
+    const squareCrop = calculateInitialCrop(200, 200, 'free')
+    expect(squareCrop).toEqual({ x: 0, y: 0, width: 200, height: 200 })
   })
 
   it('calculates centered initial crop for 1:1 aspect ratio', () => {
