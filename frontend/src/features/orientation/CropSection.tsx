@@ -47,9 +47,9 @@ export const CropSection: React.FC<CropSectionProps> = ({
   }, [isCropActive, onApplyCrop, onCancelCrop])
 
   return (
-    <div className="flex flex-col gap-3 p-3.5 bg-[#161622] rounded-xl border border-[#252536] shadow-sm">
+    <div className="flex flex-col gap-3 pb-4 border-b border-[#222230]">
       {/* Strong Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-[#232332]">
+      <div className="flex items-center justify-between pb-1.5 border-b border-[#222230]">
         <div className="flex items-center gap-2">
           <Crop className="w-4 h-4 text-[#60A5FA]" />
           <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">
@@ -61,7 +61,7 @@ export const CropSection: React.FC<CropSectionProps> = ({
             type="button"
             onClick={onResetCrop}
             title="Reset to Full Image"
-            className="text-[11px] text-[#707086] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
+            className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
           >
             <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
             <span>Reset</span>
@@ -80,8 +80,8 @@ export const CropSection: React.FC<CropSectionProps> = ({
               onClick={() => onSelectRatio(opt.id)}
               className={`py-1.5 px-2 text-xs font-medium rounded-lg border transition-all cursor-pointer text-center ${
                 isSelected
-                  ? 'bg-[#2563EB]/25 border-[#3B82F6] text-[#60A5FA] font-semibold shadow-xs'
-                  : 'bg-[#12121A] border-[#242434] text-[#A0A0B2] hover:bg-[#1C1C28] hover:text-[#E0E0EC]'
+                  ? 'bg-[#20202E] border-[#3B82F6] text-[#60A5FA] font-semibold'
+                  : 'bg-[#14141E] border-[#242432] text-[#A0A0B2] hover:bg-[#1A1A26] hover:text-[#E0E0EC]'
               }`}
             >
               {opt.label}
@@ -92,36 +92,33 @@ export const CropSection: React.FC<CropSectionProps> = ({
 
       {/* Active Crop Controls & Readout */}
       {isCropActive && (
-        <>
-          <div className="border-t border-[#232332]" />
-          <div className="flex flex-col gap-2">
-            {cropRect && (
-              <div className="text-[11px] text-[#707080] font-mono text-center">
-                Selected: <span className="text-[#A0A0B8]">{Math.round(cropRect.width)} × {Math.round(cropRect.height)} px</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onCancelCrop}
-                className="flex-1 text-xs py-1.5 flex items-center justify-center gap-1"
-              >
-                <X className="w-3.5 h-3.5 text-[#60A5FA]" />
-                <span>Cancel</span>
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={onApplyCrop}
-                className="flex-1 text-xs py-1.5 flex items-center justify-center gap-1 bg-[#2563EB] hover:bg-[#1D4ED8]"
-              >
-                <Check className="w-3.5 h-3.5 text-[#60A5FA]" />
-                <span>Apply</span>
-              </Button>
+        <div className="flex flex-col gap-2 pt-2 border-t border-[#222230]">
+          {cropRect && (
+            <div className="text-[11px] text-[#707080] font-mono text-center">
+              Selected: <span className="text-[#A0A0B8] font-semibold">{Math.round(cropRect.width)} × {Math.round(cropRect.height)} px</span>
             </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onCancelCrop}
+              className="flex-1 text-xs py-1.5 flex items-center justify-center gap-1 border border-[#2A2A3A]"
+            >
+              <X className="w-3.5 h-3.5 text-[#60A5FA]" />
+              <span>Cancel</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onApplyCrop}
+              className="flex-1 text-xs py-1.5 flex items-center justify-center gap-1 bg-[#1E1E2C] hover:bg-[#262638] text-[#60A5FA] border border-[#3B82F6]/60 font-semibold"
+            >
+              <Check className="w-3.5 h-3.5 text-[#60A5FA]" />
+              <span>Apply</span>
+            </Button>
           </div>
-        </>
+        </div>
       )}
     </div>
   )

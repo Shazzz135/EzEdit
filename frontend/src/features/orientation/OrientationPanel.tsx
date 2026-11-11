@@ -5,7 +5,7 @@ import { type AspectRatio } from '@/types/crop'
 import { type CropPanelProps } from '@/features/crop/CropPanel'
 import { useTransformState } from './useTransformState'
 import { CropSection } from './CropSection'
-import { RotateFlipCard } from './RotateFlipCard'
+import { RotateFlipSection } from './RotateFlipSection'
 import { ScaleSection } from './ScaleSection'
 import { StretchSection } from './StretchSection'
 import {
@@ -110,7 +110,7 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
 
   return (
     <div className="flex flex-col gap-3 pb-4">
-      {/* Card 1: Crop */}
+      {/* Section 1: Crop */}
       <CropSection
         isCropActive={cropProps.isCropActive}
         cropRect={cropProps.cropRect}
@@ -121,8 +121,8 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         onResetCrop={cropProps.onResetCrop}
       />
 
-      {/* Card 2: Rotate (0° - 360°) & Flip */}
-      <RotateFlipCard
+      {/* Section 2: Rotate (0° - 360°) & Flip */}
+      <RotateFlipSection
         rotationAngle={rotationAngle}
         onRotateChange={onRotateChange}
         onApplyRotation={handleApplyRotation}
@@ -131,7 +131,7 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         isProcessing={transform.isProcessing}
       />
 
-      {/* Card 3: Scale(px) */}
+      {/* Section 3: Scale(px) */}
       <ScaleSection
         width={transform.resizeWidth}
         height={transform.resizeHeight}
@@ -144,7 +144,7 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         isProcessing={transform.isProcessing}
       />
 
-      {/* Card 4: Stretch */}
+      {/* Section 4: Stretch */}
       <StretchSection
         scaleX={transform.stretchX}
         scaleY={transform.stretchY}

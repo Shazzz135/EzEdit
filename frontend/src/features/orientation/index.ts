@@ -1,6 +1,6 @@
 export * from './OrientationPanel'
 export * from './CropSection'
-export * from './RotateFlipCard'
+export * from './RotateFlipSection'
 export * from './RotateHandle'
 export * from './ScaleSection'
 export * from './StretchSection'

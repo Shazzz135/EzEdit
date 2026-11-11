@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
-export interface RotateFlipCardProps {
+export interface RotateFlipSectionProps {
   rotationAngle: number
   onRotateChange: (angle: number) => void
   onApplyRotation: () => void
@@ -16,7 +16,7 @@ export interface RotateFlipCardProps {
   isProcessing?: boolean
 }
 
-export const RotateFlipCard: React.FC<RotateFlipCardProps> = ({
+export const RotateFlipSection: React.FC<RotateFlipSectionProps> = ({
   rotationAngle,
   onRotateChange,
   onApplyRotation,
@@ -27,9 +27,9 @@ export const RotateFlipCard: React.FC<RotateFlipCardProps> = ({
   const isAngleChanged = rotationAngle !== 0
 
   return (
-    <div className="flex flex-col gap-3 p-3.5 bg-[#161622] rounded-xl border border-[#252536] shadow-sm">
+    <div className="flex flex-col gap-3 pb-4 border-b border-[#222230]">
       {/* Strong Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-[#232332]">
+      <div className="flex items-center justify-between pb-1.5 border-b border-[#222230]">
         <div className="flex items-center gap-2">
           <RotateCw className="w-4 h-4 text-[#60A5FA]" />
           <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">
@@ -40,7 +40,7 @@ export const RotateFlipCard: React.FC<RotateFlipCardProps> = ({
           <button
             type="button"
             onClick={onResetRotation}
-            className="text-[11px] text-[#707086] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
+            className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
           >
             <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
             <span>Reset (0°)</span>
@@ -64,7 +64,7 @@ export const RotateFlipCard: React.FC<RotateFlipCardProps> = ({
             step={1}
             value={rotationAngle}
             onChange={(e) => onRotateChange(Number(e.target.value))}
-            className="w-full accent-[#3B82F6] cursor-pointer h-1.5 bg-[#252536] rounded-lg"
+            className="w-full accent-[#3B82F6] cursor-pointer h-1.5 bg-[#20202E] rounded-lg"
           />
           <input
             type="number"
@@ -76,22 +76,22 @@ export const RotateFlipCard: React.FC<RotateFlipCardProps> = ({
                 Math.min(360, Math.max(0, Number(e.target.value) || 0))
               )
             }
-            className="w-16 bg-[#101018] border border-[#2A2A3C] text-right font-mono text-xs px-1.5 py-1 rounded text-[#E0E0EC] outline-none"
+            className="w-16 bg-[#12121C] border border-[#2A2A3C] text-right font-mono text-xs px-1.5 py-1 rounded text-[#E0E0EC] outline-none"
           />
         </div>
 
         <Button
-          variant="primary"
+          variant="ghost"
           onClick={onApplyRotation}
           disabled={!isAngleChanged || isProcessing}
-          className="w-full mt-1 py-1.5 text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8]"
+          className="w-full mt-1 py-1.5 text-xs font-semibold bg-[#1E1E2C] hover:bg-[#262638] text-[#60A5FA] border border-[#3B82F6]/60 disabled:opacity-40 disabled:border-[#2A2A3A] disabled:text-[#707080]"
         >
           {isProcessing ? 'Rotating...' : 'Apply Rotation'}
         </Button>
       </div>
 
       {/* Separator Line */}
-      <div className="border-t border-[#232332]" />
+      <div className="border-t border-[#222230]" />
 
       {/* Flip Sub-Section */}
       <div className="flex flex-col gap-1.5">
@@ -104,7 +104,7 @@ export const RotateFlipCard: React.FC<RotateFlipCardProps> = ({
             onClick={() => onFlip('horizontal')}
             disabled={isProcessing}
             title="Flip Horizontal (Mirror)"
-            className="flex items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
+            className="flex items-center justify-center p-2 rounded-lg bg-[#14141E] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
           >
             <FlipHorizontal className="w-4 h-4 text-[#60A5FA]" />
             <span>Flip H</span>
@@ -114,7 +114,7 @@ export const RotateFlipCard: React.FC<RotateFlipCardProps> = ({
             onClick={() => onFlip('vertical')}
             disabled={isProcessing}
             title="Flip Vertical"
-            className="flex items-center justify-center p-2 rounded-lg bg-[#12121A] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
+            className="flex items-center justify-center p-2 rounded-lg bg-[#14141E] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
           >
             <FlipVertical className="w-4 h-4 text-[#60A5FA]" />
             <span>Flip V</span>
