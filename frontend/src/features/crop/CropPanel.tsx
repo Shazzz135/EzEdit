@@ -73,57 +73,59 @@ export const CropPanel: React.FC<CropPanelProps> = ({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold text-[#A0A0B0] uppercase tracking-wider">
-          Aspect Ratio
-        </h4>
-        {onResetCrop && (
-          <button
-            type="button"
-            onClick={onResetCrop}
-            title="Reset Crop to Full Image"
-            className="text-xs text-[#808096] hover:text-[#E0E0EC] flex items-center gap-1 cursor-pointer"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>Reset</span>
-          </button>
+    <div className="flex flex-col flex-1 h-full min-h-full justify-between gap-3">
+      <div className="flex flex-col gap-3 flex-1">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-semibold text-[#A0A0B0] uppercase tracking-wider">
+            Aspect Ratio
+          </h4>
+          {onResetCrop && (
+            <button
+              type="button"
+              onClick={onResetCrop}
+              title="Reset Crop to Full Image"
+              className="text-xs text-[#808096] hover:text-[#E0E0EC] flex items-center gap-1 cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
+
+        {/* Aspect Ratio Buttons Grid */}
+        <div className="grid grid-cols-2 gap-1.5">
+          {RATIO_OPTIONS.map((opt) => {
+            const isSelected = aspectRatio === opt.id
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => onSelectRatio(opt.id)}
+                className={`px-2.5 py-1.5 text-xs font-medium rounded border transition-colors cursor-pointer text-left ${
+                  isSelected
+                    ? 'bg-[#2563EB]/20 border-[#3B82F6] text-[#60A5FA]'
+                    : 'bg-[#181822] border-[#242434] text-[#A0A0B2] hover:bg-[#20202E] hover:text-[#E0E0EC]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Dimension Readout (hidden on mobile) */}
+        {cropRect && (
+          <div className="hidden md:flex p-2.5 bg-[#14141E] border border-[#222230] rounded flex-col gap-1">
+            <span className="text-[11px] text-[#707080]">Cropped Resolution</span>
+            <span className="text-xs font-mono font-semibold text-[#E0E0EC]">
+              {Math.round(cropRect.width)} × {Math.round(cropRect.height)} px
+            </span>
+          </div>
         )}
       </div>
 
-      {/* Aspect Ratio Buttons Grid */}
-      <div className="grid grid-cols-2 gap-1.5">
-        {RATIO_OPTIONS.map((opt) => {
-          const isSelected = aspectRatio === opt.id
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => onSelectRatio(opt.id)}
-              className={`px-2.5 py-1.5 text-xs font-medium rounded border transition-colors cursor-pointer text-left ${
-                isSelected
-                  ? 'bg-[#2563EB]/20 border-[#3B82F6] text-[#60A5FA]'
-                  : 'bg-[#181822] border-[#242434] text-[#A0A0B2] hover:bg-[#20202E] hover:text-[#E0E0EC]'
-              }`}
-            >
-              {opt.label}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Dimension Readout (hidden on mobile) */}
-      {cropRect && (
-        <div className="hidden md:flex p-2.5 bg-[#14141E] border border-[#222230] rounded flex-col gap-1">
-          <span className="text-[11px] text-[#707080]">Cropped Resolution</span>
-          <span className="text-xs font-mono font-semibold text-[#E0E0EC]">
-            {Math.round(cropRect.width)} × {Math.round(cropRect.height)} px
-          </span>
-        </div>
-      )}
-
-      {/* Action Buttons: Apply & Cancel */}
-      <div className="flex items-center gap-2 pt-2 border-t border-[#20202E]">
+      {/* Action Buttons: Apply & Cancel - Always pushed to the bottom */}
+      <div className="mt-auto pt-2.5 border-t border-[#20202E] flex items-center gap-2 flex-shrink-0 bg-[#16161C]">
         <Button
           variant="ghost"
           size="sm"

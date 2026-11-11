@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { useCanvasPanZoom } from './useCanvasPanZoom'
 import { type DocumentState } from '@/types/document'
 import { Maximize2, RotateCcw, Plus } from 'lucide-react'
@@ -34,17 +34,23 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     }
   }, [docId, docW, docH, fitToScreen])
 
-  // Mouse wheel zoom
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
+  // Native non-passive wheel listener allows e.preventDefault() for smooth focal zooming
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      if (!containerRef.current) return
-      const rect = containerRef.current.getBoundingClientRect()
+      const rect = container.getBoundingClientRect()
       const factor = e.deltaY < 0 ? 1.15 : 0.85
       panZoom.zoomTo(panZoom.scale * factor, { x: e.clientX, y: e.clientY }, rect)
-    },
-    [panZoom]
-  )
+    }
+
+    container.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      container.removeEventListener('wheel', onWheel)
+    }
+  }, [panZoom])
 
   // Keyboard spacebar listener for panning
   useEffect(() => {
@@ -150,7 +156,6 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   return (
     <div
       ref={containerRef}
-      onWheel={handleWheel}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
