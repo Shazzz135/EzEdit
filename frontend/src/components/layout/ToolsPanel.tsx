@@ -1,11 +1,11 @@
 import React from 'react'
 import { Dropdown } from '@/components/ui/Dropdown'
-import { PrecisionSlider } from '@/components/ui/PrecisionSlider'
 import { OrientationPanel } from '@/features/orientation'
+import { AdjustmentsPanel } from '@/features/adjustments'
 import { type CropPanelProps } from '@/features/crop/CropPanel'
 import { type DocumentState, type AdjustmentValues } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
-import { Crop, Sliders, Wand2, Brush, Scissors, Sparkles, RotateCcw } from 'lucide-react'
+import { Crop, Sliders, Wand2, Brush, Scissors, Sparkles } from 'lucide-react'
 
 export type ToolCategory =
   | 'orientation'
@@ -75,41 +75,11 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
         )}
 
         {activeDoc && activeCategory === 'adjustments' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#222230]">
-              <h4 className="text-xs font-semibold text-[#A0A0B0] uppercase tracking-wider">
-                Light & Color
-              </h4>
-              <button
-                type="button"
-                onClick={() => onResetAdjustments?.(activeDoc.id)}
-                title="Reset Adjustments"
-                className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
-              >
-                <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
-                <span>Reset</span>
-              </button>
-            </div>
-            <PrecisionSlider
-              label="Exposure"
-              value={activeDoc.adjustments.exposure}
-              onChange={(v) => onUpdateAdjustments(activeDoc.id, { exposure: v })}
-              min={-5.0}
-              max={5.0}
-              step={0.1}
-              defaultValue={0.0}
-              unit=" EV"
-            />
-            <PrecisionSlider
-              label="Contrast"
-              value={activeDoc.adjustments.contrast}
-              onChange={(v) => onUpdateAdjustments(activeDoc.id, { contrast: v })}
-              min={-100.0}
-              max={100.0}
-              step={0.1}
-              defaultValue={0.0}
-            />
-          </div>
+          <AdjustmentsPanel
+            adjustments={activeDoc.adjustments}
+            onChange={(partial) => onUpdateAdjustments(activeDoc.id, partial)}
+            onResetAll={() => onResetAdjustments?.(activeDoc.id)}
+          />
         )}
 
         {activeDoc && activeCategory !== 'orientation' && activeCategory !== 'adjustments' && (
