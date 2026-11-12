@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react'
-import { type RetouchTool, type RetouchSettings, type InpaintingMethod, type Point } from './types'
+import { useState, useCallback, useEffect, useMemo } from 'react'
+import { type RetouchTool, type RetouchSettings, type InpaintingMethod, type Point, type MaskStroke } from './types'
 import { executeInpainting } from './executeInpainting'
 import { type DocumentState } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
@@ -9,12 +9,12 @@ export interface UseRetouchStateOptions {
 }
 
 export const useRetouchState = (options: UseRetouchStateOptions) => {
-  const [tool, setTool] = useState<RetouchTool>('clone-stamp')
+  const [tool, setToolState] = useState<RetouchTool>('clone-stamp')
   const [sourcePoint, setSourcePoint] = useState<Point | null>(null)
   const [isAltPressed, setIsAltPressed] = useState(false)
   const [isProcessingInpaint, setIsProcessingInpaint] = useState(false)
   const [inpaintProgress, setInpaintProgress] = useState(0)
-  const [paintedMaskPaths, setPaintedMaskPaths] = useState<Point[][]>([])
+  const [paintedMaskStrokes, setPaintedMaskStrokes] = useState<MaskStroke[]>([])
 
   const [settings, setSettings] = useState<RetouchSettings>({
     radius: 24,
@@ -32,7 +32,7 @@ export const useRetouchState = (options: UseRetouchStateOptions) => {
       setIsAltPressed(false)
       setIsProcessingInpaint(false)
       setInpaintProgress(0)
-      setPaintedMaskPaths([])
+      setPaintedMaskStrokes([])
     }
   }
 
@@ -46,17 +46,31 @@ export const useRetouchState = (options: UseRetouchStateOptions) => {
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Alt' || !e.altKey) setIsAltPressed(false)
     }
+    const onBlur = () => setIsAltPressed(false)
 
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
-    window.addEventListener('blur', () => setIsAltPressed(false))
+    window.addEventListener('blur', onBlur)
 
     return () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
-      window.removeEventListener('blur', () => setIsAltPressed(false))
+      window.removeEventListener('blur', onBlur)
     }
   }, [options.isActive])
+
+  const setTool = useCallback((nextTool: RetouchTool) => {
+    setToolState((prevTool) => {
+      if (prevTool !== nextTool) {
+        if (nextTool === 'object-remove') {
+          setSourcePoint(null)
+        } else if (prevTool === 'object-remove') {
+          setPaintedMaskStrokes([])
+        }
+      }
+      return nextTool
+    })
+  }, [])
 
   const setRadius = useCallback((radius: number) => {
     setSettings((s) => ({ ...s, radius: Math.max(2, Math.min(150, radius)) }))
@@ -78,15 +92,23 @@ export const useRetouchState = (options: UseRetouchStateOptions) => {
     setSettings((s) => ({ ...s, inpaintPrompt: prompt }))
   }, [])
 
-  const addMaskPath = useCallback((pts: Point[]) => {
-    if (pts.length >= 3) {
-      setPaintedMaskPaths((prev) => [...prev, pts])
+  const addMaskPath = useCallback((pts: Point[], strokeRadius?: number) => {
+    if (pts.length >= 1) {
+      setPaintedMaskStrokes((prev) => [
+        ...prev,
+        { points: pts, radius: strokeRadius ?? settings.radius },
+      ])
     }
-  }, [])
+  }, [settings.radius])
 
   const clearMaskPaths = useCallback(() => {
-    setPaintedMaskPaths([])
+    setPaintedMaskStrokes([])
   }, [])
+
+  const paintedMaskPaths = useMemo(
+    () => paintedMaskStrokes.map((s) => s.points),
+    [paintedMaskStrokes]
+  )
 
   const handleExecuteInpaint = useCallback(
     async (
@@ -95,8 +117,9 @@ export const useRetouchState = (options: UseRetouchStateOptions) => {
       vectorPaths?: Point[][]
     ) => {
       if (!activeDoc) return
-      const pathsToUse = (vectorPaths && vectorPaths.length > 0) ? vectorPaths : paintedMaskPaths
-      if (pathsToUse.length === 0) return
+      const hasStrokes = paintedMaskStrokes.length > 0
+      const hasVector = !!(vectorPaths && vectorPaths.length > 0)
+      if (!hasStrokes && !hasVector) return
 
       setIsProcessingInpaint(true)
       setInpaintProgress(0.1)
@@ -109,12 +132,14 @@ export const useRetouchState = (options: UseRetouchStateOptions) => {
           {
             method: settings.inpaintMethod,
             prompt: settings.inpaintPrompt,
-            maskPaths: pathsToUse,
+            brushRadius: settings.radius,
+            maskStrokes: paintedMaskStrokes,
+            vectorPaths,
             onProgress: (p) => setInpaintProgress(p),
           }
         )
         onApplyTransform(result)
-        setPaintedMaskPaths([])
+        setPaintedMaskStrokes([])
       } catch (err) {
         console.error('Inpainting failed:', err)
       } finally {
@@ -122,7 +147,7 @@ export const useRetouchState = (options: UseRetouchStateOptions) => {
         setInpaintProgress(0)
       }
     },
-    [paintedMaskPaths, settings.inpaintMethod, settings.inpaintPrompt]
+    [paintedMaskStrokes, settings.inpaintMethod, settings.inpaintPrompt, settings.radius]
   )
 
   const clearSourcePoint = useCallback(() => setSourcePoint(null), [])
@@ -130,7 +155,7 @@ export const useRetouchState = (options: UseRetouchStateOptions) => {
   const resetRetouch = useCallback(() => {
     setSourcePoint(null)
     setIsAltPressed(false)
-    setPaintedMaskPaths([])
+    setPaintedMaskStrokes([])
   }, [])
 
   return {
@@ -141,6 +166,7 @@ export const useRetouchState = (options: UseRetouchStateOptions) => {
     isProcessingInpaint,
     inpaintProgress,
     paintedMaskPaths,
+    paintedMaskStrokes,
     setTool,
     setRadius,
     setHardness,

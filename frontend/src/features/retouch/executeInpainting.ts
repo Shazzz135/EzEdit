@@ -1,11 +1,14 @@
-import { type Point } from './types'
+import { type Point, type MaskStroke } from './types'
 import { runInpaintingMath } from './inpaintingMath'
 import { executePollinationsInpainting } from './pollinationsInpaint'
 
 export interface ExecuteInpaintingOptions {
   method: 'local-patch' | 'pollinations-ai'
   prompt?: string
+  brushRadius?: number
+  maskStrokes?: MaskStroke[]
   maskPaths?: Point[][]
+  vectorPaths?: Point[][]
   maskData?: Uint8ClampedArray
   onProgress?: (progress: number) => void
 }
@@ -27,11 +30,15 @@ export async function executeInpainting(
   ctx.drawImage(baseImg, 0, 0)
   const imgData = ctx.getImageData(0, 0, width, height)
 
-  // 2. Prepare Mask Buffer
+  // 2. Prepare Mask Buffer (supports brush strokes, vector polygons, or raw maskData)
   let maskBuffer: Uint8ClampedArray
+  const hasStrokes = !!(options.maskStrokes && options.maskStrokes.length > 0)
+  const hasPaths = !!(options.maskPaths && options.maskPaths.length > 0)
+  const hasVector = !!(options.vectorPaths && options.vectorPaths.length > 0)
+
   if (options.maskData) {
     maskBuffer = options.maskData
-  } else if (options.maskPaths && options.maskPaths.length > 0) {
+  } else if (hasStrokes || hasPaths || hasVector) {
     const maskCanvas = document.createElement('canvas')
     maskCanvas.width = width
     maskCanvas.height = height
@@ -41,14 +48,49 @@ export async function executeInpainting(
     mCtx.fillRect(0, 0, width, height)
 
     mCtx.fillStyle = '#FFFFFF'
-    for (const path of options.maskPaths) {
-      if (path.length < 3) continue
+    mCtx.strokeStyle = '#FFFFFF'
+    mCtx.lineCap = 'round'
+    mCtx.lineJoin = 'round'
+
+    // Render painted brush strokes with their brush radius
+    const strokesToDraw: MaskStroke[] = options.maskStrokes
+      ? options.maskStrokes
+      : (options.maskPaths ?? []).map((points) => ({
+          points,
+          radius: options.brushRadius ?? 24,
+        }))
+
+    for (const stroke of strokesToDraw) {
+      const pts = stroke.points
+      const r = Math.max(2, stroke.radius)
+      if (pts.length === 0) continue
+      if (pts.length === 1) {
+        mCtx.beginPath()
+        mCtx.arc(pts[0].x, pts[0].y, r, 0, Math.PI * 2)
+        mCtx.fill()
+      } else {
+        mCtx.lineWidth = r * 2
+        mCtx.beginPath()
+        mCtx.moveTo(pts[0].x, pts[0].y)
+        for (let i = 1; i < pts.length; i++) {
+          mCtx.lineTo(pts[i].x, pts[i].y)
+        }
+        mCtx.stroke()
+      }
+    }
+
+    // Also fill any active vector selection polygons
+    for (const poly of options.vectorPaths ?? []) {
+      if (poly.length < 3) continue
       mCtx.beginPath()
-      mCtx.moveTo(path[0].x, path[0].y)
-      for (let i = 1; i < path.length; i++) mCtx.lineTo(path[i].x, path[i].y)
+      mCtx.moveTo(poly[0].x, poly[0].y)
+      for (let i = 1; i < poly.length; i++) {
+        mCtx.lineTo(poly[i].x, poly[i].y)
+      }
       mCtx.closePath()
       mCtx.fill()
     }
+
     maskBuffer = mCtx.getImageData(0, 0, width, height).data
   } else {
     throw new Error('No inpainting mask provided')
@@ -65,29 +107,34 @@ export async function executeInpainting(
 
     if (aiBlob) {
       options.onProgress?.(0.8)
-      const aiImg = await loadImage(URL.createObjectURL(aiBlob))
-      const aiCanvas = document.createElement('canvas')
-      aiCanvas.width = width
-      aiCanvas.height = height
-      const aiCtx = aiCanvas.getContext('2d')
-      if (aiCtx) {
-        aiCtx.drawImage(aiImg, 0, 0, width, height)
-        const aiData = aiCtx.getImageData(0, 0, width, height).data
-        const outData = imgData.data
+      const aiUrl = URL.createObjectURL(aiBlob)
+      try {
+        const aiImg = await loadImage(aiUrl)
+        const aiCanvas = document.createElement('canvas')
+        aiCanvas.width = width
+        aiCanvas.height = height
+        const aiCtx = aiCanvas.getContext('2d')
+        if (aiCtx) {
+          aiCtx.drawImage(aiImg, 0, 0, width, height)
+          const aiData = aiCtx.getImageData(0, 0, width, height).data
+          const outData = imgData.data
 
-        for (let i = 0; i < width * height; i++) {
-          const mVal = maskBuffer[i * 4 + 3] || maskBuffer[i * 4]
-          if (mVal > 32) {
-            const idx = i * 4
-            outData[idx] = aiData[idx]
-            outData[idx + 1] = aiData[idx + 1]
-            outData[idx + 2] = aiData[idx + 2]
-            outData[idx + 3] = 255
+          for (let i = 0; i < width * height; i++) {
+            const mVal = maskBuffer[i * 4] || maskBuffer[i * 4 + 3]
+            if (mVal > 32) {
+              const idx = i * 4
+              outData[idx] = aiData[idx]
+              outData[idx + 1] = aiData[idx + 1]
+              outData[idx + 2] = aiData[idx + 2]
+              outData[idx + 3] = 255
+            }
           }
+          ctx.putImageData(imgData, 0, 0)
+          options.onProgress?.(1.0)
+          return canvasToResult(canvas, width, height)
         }
-        ctx.putImageData(imgData, 0, 0)
-        options.onProgress?.(1.0)
-        return canvasToResult(canvas, width, height)
+      } finally {
+        URL.revokeObjectURL(aiUrl)
       }
     }
   }
@@ -112,21 +159,26 @@ function runWorkerInpainting(
     if (typeof Worker !== 'undefined') {
       try {
         const worker = new Worker(new URL('./inpainting.worker.ts', import.meta.url), { type: 'module' })
-        worker.onmessage = (e) => {
-          if (e.data.type === 'progress') {
-            onProgress?.(e.data.progress)
-          } else if (e.data.type === 'complete') {
-            worker.terminate()
-            resolve(e.data.result)
-          } else if (e.data.type === 'error') {
-            worker.terminate()
-            resolve(runInpaintingMath(imgData, maskBuffer, width, height, onProgress))
-          }
-        }
-        worker.onerror = () => {
+        let settled = false
+        const finishFallback = () => {
+          if (settled) return
+          settled = true
           worker.terminate()
           resolve(runInpaintingMath(imgData, maskBuffer, width, height, onProgress))
         }
+        worker.onmessage = (e) => {
+          if (settled) return
+          if (e.data.type === 'progress') {
+            onProgress?.(e.data.progress)
+          } else if (e.data.type === 'complete' && e.data.result?.length === imgData.length) {
+            settled = true
+            worker.terminate()
+            resolve(e.data.result)
+          } else if (e.data.type === 'error') {
+            finishFallback()
+          }
+        }
+        worker.onerror = finishFallback
         worker.postMessage({ imageBuffer: imgData, maskBuffer, width, height })
         return
       } catch {

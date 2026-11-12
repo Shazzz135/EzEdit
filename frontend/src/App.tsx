@@ -163,7 +163,7 @@ export const App: React.FC = () => {
               <RetouchOverlay
                 imageSrc={activeDoc.imageSrc} imageWidth={activeDoc.currentWidth} imageHeight={activeDoc.currentHeight} zoomScale={scale}
                 tool={retouch.tool} settings={retouch.settings} sourcePoint={retouch.sourcePoint} isAltPressed={retouch.isAltPressed}
-                paintedMaskPaths={retouch.paintedMaskPaths} onAddMaskPath={retouch.addMaskPath} onClearMaskPaths={retouch.clearMaskPaths}
+                paintedMaskPaths={retouch.paintedMaskPaths} paintedMaskStrokes={retouch.paintedMaskStrokes} onAddMaskPath={retouch.addMaskPath} onClearMaskPaths={retouch.clearMaskPaths}
                 onSetSourcePoint={retouch.setSourcePoint} onCommitTransform={handleApplyTransform}
               />
             ) : undefined}
