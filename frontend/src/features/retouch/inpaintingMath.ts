@@ -54,19 +54,16 @@ export function runInpaintingMath(
     }
   }
 
-  // Keep immutable record of original clean background pixels (0 = valid source, 1 = inside dilated hole)
   const isHole = new Uint8Array(totalPixels)
   const distMap = new Int16Array(totalPixels)
   const queue = new Int32Array(totalPixels)
-  let head = 0
-  let tail = 0
+  let head = 0, tail = 0
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = y * width + x
       if (status[idx] !== 2) continue
       isHole[idx] = 1
-
       let touchesKnown = false
       for (let dy = -1; dy <= 1 && !touchesKnown; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
@@ -86,14 +83,12 @@ export function runInpaintingMath(
     }
   }
 
-  // Edge case: entire image was masked
   if (tail === 0) return result
 
   // 2. Stage 1: Multi-Radius Fast Marching Harmonic Illumination Fill
   while (head < tail) {
     const idx = queue[head++]
-    const x = idx % width
-    const y = (idx - x) / width
+    const x = idx % width, y = (idx - x) / width
     const depth = distMap[idx]
     const searchRadius = Math.min(12, 4 + (depth >> 1))
 
@@ -151,15 +146,10 @@ export function runInpaintingMath(
 
   for (let q = 0; q < tail; q++) {
     const idx = queue[q]
-    const x = idx % width
-    const y = (idx - x) / width
+    const x = idx % width, y = (idx - x) / width
     const pIdx = idx * 4
-    const targetR = harmonicBuffer[pIdx]
-    const targetG = harmonicBuffer[pIdx + 1]
-    const targetB = harmonicBuffer[pIdx + 2]
-
-    let bestSrc = -1
-    let bestCost = 1e9
+    const targetR = harmonicBuffer[pIdx], targetG = harmonicBuffer[pIdx + 1], targetB = harmonicBuffer[pIdx + 2]
+    let bestSrc = -1, bestCost = 1e9
 
     // A. Coherent PatchMatch propagation from already-synthesized neighbors
     for (let k = 0; k < 4; k++) {
@@ -167,20 +157,14 @@ export function runInpaintingMath(
       if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
       const nSrc = sourceMap[ny * width + nx]
       if (nSrc < 0) continue
-      const sx = (nSrc % width) - DIRS_8[k][0]
-      const sy = Math.floor(nSrc / width) - DIRS_8[k][1]
+      const sx = (nSrc % width) - DIRS_8[k][0], sy = Math.floor(nSrc / width) - DIRS_8[k][1]
       if (sx >= 1 && sx < width - 1 && sy >= 1 && sy < height - 1) {
         const candIdx = sy * width + sx
         if (isHole[candIdx] === 0) {
           const cIdx = candIdx * 4
-          const dr = imageBuffer[cIdx] - targetR
-          const dg = imageBuffer[cIdx + 1] - targetG
-          const db = imageBuffer[cIdx + 2] - targetB
-          const cost = (dr * dr + dg * dg + db * db) * 0.65 // Coherence bonus
-          if (cost < bestCost) {
-            bestCost = cost
-            bestSrc = candIdx
-          }
+          const dr = imageBuffer[cIdx] - targetR, dg = imageBuffer[cIdx + 1] - targetG, db = imageBuffer[cIdx + 2] - targetB
+          const cost = (dr * dr + dg * dg + db * db) * 0.65
+          if (cost < bestCost) { bestCost = cost; bestSrc = candIdx }
         }
       }
     }
@@ -198,20 +182,12 @@ export function runInpaintingMath(
           const sy = Math.max(1, Math.min(height - 2, ry + dy * offsetSteps))
           const candIdx = isHole[sy * width + sx] === 0 ? sy * width + sx : rIdx
           const cIdx = candIdx * 4
-          const dr = imageBuffer[cIdx] - targetR
-          const dg = imageBuffer[cIdx + 1] - targetG
-          const db = imageBuffer[cIdx + 2] - targetB
-          const distPenalty = steps * 1.5
-          const cost = dr * dr + dg * dg + db * db + distPenalty
-          if (cost < bestCost) {
-            bestCost = cost
-            bestSrc = candIdx
-          }
+          const dr = imageBuffer[cIdx] - targetR, dg = imageBuffer[cIdx + 1] - targetG, db = imageBuffer[cIdx + 2] - targetB
+          const cost = dr * dr + dg * dg + db * db + steps * 1.5
+          if (cost < bestCost) { bestCost = cost; bestSrc = candIdx }
           break
         }
-        rx += dx
-        ry += dy
-        steps++
+        rx += dx; ry += dy; steps++
       }
     }
 
@@ -232,20 +208,15 @@ export function runInpaintingMath(
       const detR = cnt > 0 ? imageBuffer[sIdx4] - mR / cnt : 0
       const detG = cnt > 0 ? imageBuffer[sIdx4 + 1] - mG / cnt : 0
       const detB = cnt > 0 ? imageBuffer[sIdx4 + 2] - mB / cnt : 0
-
       const edgeFeather = Math.min(1, distMap[idx] / 3)
       const baseMixR = targetR * (1 - 0.35 * edgeFeather) + imageBuffer[sIdx4] * (0.35 * edgeFeather)
       const baseMixG = targetG * (1 - 0.35 * edgeFeather) + imageBuffer[sIdx4 + 1] * (0.35 * edgeFeather)
       const baseMixB = targetB * (1 - 0.35 * edgeFeather) + imageBuffer[sIdx4 + 2] * (0.35 * edgeFeather)
-
       result[pIdx] = Math.max(0, Math.min(255, Math.round(baseMixR + detR * edgeFeather)))
       result[pIdx + 1] = Math.max(0, Math.min(255, Math.round(baseMixG + detG * edgeFeather)))
       result[pIdx + 2] = Math.max(0, Math.min(255, Math.round(baseMixB + detB * edgeFeather)))
     }
-
-    if (q % 400 === 0 && onProgress) {
-      onProgress(0.6 + Math.min(0.38, (q / tail) * 0.38))
-    }
+    if (q % 400 === 0 && onProgress) onProgress(0.6 + Math.min(0.38, (q / tail) * 0.38))
   }
 
   onProgress?.(1.0)
