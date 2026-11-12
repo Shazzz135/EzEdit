@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { Plus } from 'lucide-react'
 import { Header, type HeaderProps } from './Header'
-import { PermanentAdSlot } from './PermanentAdSlot'
 
 export interface WorkspaceShellProps {
   headerProps?: HeaderProps
@@ -69,14 +68,9 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
       {/* 1. Top Navigation & Action Header */}
       <Header {...headerProps}>{tabBarContent}</Header>
 
-      {/* 2. Main Workspace Partition */}
+      {/* 2. Main Workspace Partition (Full editor workspace without ads) */}
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        {/* A. Permanent Desktop Ad Space (Far Left on Desktop: 160x600) */}
-        <div className="hidden md:flex flex-col items-center justify-start p-2 border-r border-[#242430] bg-[#101015] flex-shrink-0">
-          <PermanentAdSlot placement="desktop-skyscraper" />
-        </div>
-
-        {/* B. Canvas Editor Viewport Area (Middle on Desktop, Top on Mobile) */}
+        {/* A. Canvas Editor Viewport Area (Full-bleed on Desktop, Top on Mobile) */}
         <section
           aria-label="Photo Canvas Viewport"
           className="flex-1 relative bg-[#0B0B0E] overflow-hidden flex items-center justify-center min-h-[160px] md:min-h-[300px]"
@@ -97,7 +91,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
           )}
         </section>
 
-        {/* C. Desktop Resizable Handle (Divider between Canvas & Tools) */}
+        {/* B. Desktop Resizable Handle (Divider between Canvas & Tools) */}
         <div
           role="separator"
           aria-label="Resize tools panel"
@@ -115,7 +109,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
           />
         </div>
 
-        {/* D. Tools Panel (Full width on Mobile, Resizable width on Desktop) */}
+        {/* C. Tools Panel (Full width on Mobile, Resizable width on Desktop) */}
         <aside
           aria-label="Editor Tools"
           style={{ '--tools-width': `${toolsWidth}px` } as React.CSSProperties}
@@ -128,11 +122,6 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
           )}
         </aside>
       </main>
-
-      {/* 3. Permanent Mobile Ad Banner (Horizontal at the very bottom on Mobile: 320x50) */}
-      <footer className="flex md:hidden w-full flex-shrink-0 z-20">
-        <PermanentAdSlot placement="mobile-banner" />
-      </footer>
     </div>
   )
 }

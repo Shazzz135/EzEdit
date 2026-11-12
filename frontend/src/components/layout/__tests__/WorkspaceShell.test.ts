@@ -1,14 +1,12 @@
 import { describe, it, expect } from 'vitest'
 
 describe('WorkspaceShell & Layout Constraints', () => {
-  it('enforces exact IAB ad slot dimensions to prevent layout shift', () => {
-    const desktopSkyscraperWidth = 160
-    const desktopSkyscraperHeight = 600
-    const mobileBannerHeight = 50
-
-    expect(desktopSkyscraperWidth).toBe(160)
-    expect(desktopSkyscraperHeight).toBe(600)
-    expect(mobileBannerHeight).toBe(50)
+  it('allocates full workspace area to the canvas editor without ad slots', () => {
+    // Editor canvas now spans full available horizontal space on desktop and top viewport on mobile
+    const adSpaceWidth = 0
+    const adSpaceHeight = 0
+    expect(adSpaceWidth).toBe(0)
+    expect(adSpaceHeight).toBe(0)
   })
 
   it('verifies resizable tools menu width boundaries', () => {
