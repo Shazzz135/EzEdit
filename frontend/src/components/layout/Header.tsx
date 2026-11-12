@@ -8,6 +8,7 @@ import {
   Download,
   Sparkles,
   Layers,
+  Hand,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -18,6 +19,8 @@ export interface HeaderProps {
   onZoomIn?: () => void
   onZoomOut?: () => void
   onToggleCompare?: () => void
+  onToggleGrab?: () => void
+  isGrabActive?: boolean
   onExport?: () => void
   onOpenAI?: () => void
   canUndo?: boolean
@@ -33,6 +36,8 @@ export const Header: React.FC<HeaderProps> = ({
   onZoomIn,
   onZoomOut,
   onToggleCompare,
+  onToggleGrab,
+  isGrabActive = false,
   onExport,
   onOpenAI,
   canUndo = false,
@@ -66,8 +71,19 @@ export const Header: React.FC<HeaderProps> = ({
         {mobileSelector}
       </div>
 
-      {/* 3. Mobile Action Buttons (Simple: AI & Export) */}
+      {/* 3. Mobile Action Buttons (Simple: Grab, AI & Export) */}
       <div className="flex md:hidden items-center gap-1 flex-shrink-0">
+        <Button
+          variant="icon"
+          size="icon"
+          isActive={isGrabActive}
+          onClick={onToggleGrab}
+          aria-label="Grab Tool"
+          title="Grab Tool (Space)"
+          className={isGrabActive ? 'text-[#60A5FA] bg-[#222234]' : 'text-[#808094] hover:text-[#D0D0DC]'}
+        >
+          <Hand className="w-3.5 h-3.5" />
+        </Button>
         <Button
           variant="icon"
           size="icon"
@@ -117,6 +133,19 @@ export const Header: React.FC<HeaderProps> = ({
 
         <div className="w-[1px] h-4 bg-[#262634] mx-1" />
 
+        <Tooltip content="Grab / Pan Canvas" shortcut="Space">
+          <Button
+            variant="icon"
+            size="icon"
+            isActive={isGrabActive}
+            onClick={onToggleGrab}
+            aria-label="Grab Tool"
+            className={isGrabActive ? 'text-[#60A5FA] bg-[#222234]' : ''}
+          >
+            <Hand className="w-3.5 h-3.5" />
+          </Button>
+        </Tooltip>
+
         <Tooltip content="Zoom Out" shortcut="-">
           <Button
             variant="icon"
@@ -139,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
           </Button>
         </Tooltip>
 
-        <Tooltip content="Compare with Original" shortcut="Hold Space">
+        <Tooltip content="Compare with Original" shortcut="Hold \ or C">
           <Button
             variant="icon"
             size="icon"

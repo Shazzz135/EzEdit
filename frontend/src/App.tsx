@@ -5,6 +5,7 @@ import { WorkspaceModals } from '@/components/layout/WorkspaceModals'
 import { MobileDocumentSelector } from '@/components/layout/MobileDocumentSelector'
 import { TabBar } from '@/features/tabs/TabBar'
 import { CanvasViewport } from '@/features/canvas/CanvasViewport'
+import { useCanvasPanZoom } from '@/features/canvas/useCanvasPanZoom'
 import { useCropState, CropOverlay, executeCrop } from '@/features/crop'
 import { RotateHandle } from '@/features/orientation'
 import { useSelectionState, SelectionOverlay, copySelection, cutSelection } from '@/features/selection'
@@ -45,6 +46,7 @@ export const App: React.FC = () => {
     redo,
   } = useDocumentStore()
   const activeDoc = getActiveDocument()
+  const panZoom = useCanvasPanZoom()
   const crop = useCropState()
   const selection = useSelectionState(activeCategory === 'selection' && selectionSubTab === 'vector', { onCopy: () => handleCopySelection(), onCut: () => handleCutSelection() })
   const { oversizedFile, setOversizedFile, handleDropFile, handleDownscaleAndImport } =
@@ -142,12 +144,17 @@ export const App: React.FC = () => {
         headerProps={{
           onUndo: canUndo ? () => undo(activeDoc!.id) : undefined,
           onRedo: canRedo ? () => redo(activeDoc!.id) : undefined,
+          onZoomIn: panZoom.zoomIn,
+          onZoomOut: panZoom.zoomOut,
+          isGrabActive: panZoom.isHandToolActive || panZoom.isSpacePressed,
+          onToggleGrab: panZoom.toggleHandTool,
           onOpenAI: () => { setActiveCategory('ai'); resetToolStates(); },
           canUndo, canRedo, mobileSelector,
         }}
         canvasContent={
           <CanvasViewport
             document={activeDoc}
+            panZoom={panZoom}
             onDropImage={handleDropFile}
             previewScale={previewScale}
             rotationAngle={rotationAngle}
