@@ -109,4 +109,32 @@ describe('Mass Reset & Transfer Edits Across Tabs', () => {
     expect(docsAfterSecond.find((d) => d.id === d2.id)!.filter.intensity).toBe(70)
     expect(docsAfterSecond.find((d) => d.id === d3.id)!.filter.preset).toBe('none')
   })
+
+  it('supports undoing and redoing adjustments and orientation changes', () => {
+    const store = useDocumentStore.getState()
+    const d = store.addDocument({
+      name: 'test.png',
+      originalWidth: 800,
+      originalHeight: 600,
+      currentWidth: 800,
+      currentHeight: 600,
+      imageSrc: 'blob:test',
+    })
+    const id = d.id!
+
+    // Update adjustment
+    store.updateAdjustments(id, { exposure: 2.0 })
+    expect(useDocumentStore.getState().getActiveDocument()?.adjustments.exposure).toBe(2.0)
+    expect(useDocumentStore.getState().getActiveDocument()?.historyIndex).toBe(1)
+
+    // Undo adjustment
+    store.undo(id)
+    expect(useDocumentStore.getState().getActiveDocument()?.adjustments.exposure).toBe(0.0)
+    expect(useDocumentStore.getState().getActiveDocument()?.historyIndex).toBe(0)
+
+    // Redo adjustment
+    store.redo(id)
+    expect(useDocumentStore.getState().getActiveDocument()?.adjustments.exposure).toBe(2.0)
+    expect(useDocumentStore.getState().getActiveDocument()?.historyIndex).toBe(1)
+  })
 })

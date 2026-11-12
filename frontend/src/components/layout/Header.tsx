@@ -1,37 +1,24 @@
 import React from 'react'
 import {
   Undo2, Redo2, RotateCcw, ArrowRightLeft, ZoomIn, ZoomOut,
-  SplitSquareVertical, Download, Sparkles, Layers, Hand,
+  SplitSquareVertical, Download, FolderDown, Sparkles, Layers, Hand,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
 
 export interface HeaderProps {
-  onUndo?: () => void
-  onRedo?: () => void
-  onMassReset?: () => void
-  onOpenTransferEdits?: () => void
-  onZoomIn?: () => void
-  onZoomOut?: () => void
-  onToggleCompare?: () => void
-  onToggleGrab?: () => void
-  isGrabActive?: boolean
-  onExport?: () => void
-  onOpenAI?: () => void
-  canUndo?: boolean
-  canRedo?: boolean
-  canMassReset?: boolean
-  canTransferEdits?: boolean
-  isComparing?: boolean
-  children?: React.ReactNode
-  mobileSelector?: React.ReactNode
+  onUndo?: () => void; onRedo?: () => void; onMassReset?: () => void; onOpenTransferEdits?: () => void
+  onZoomIn?: () => void; onZoomOut?: () => void; onToggleCompare?: () => void; onToggleGrab?: () => void
+  isGrabActive?: boolean; onExport?: () => void; onExportAll?: () => void; onOpenAI?: () => void
+  canUndo?: boolean; canRedo?: boolean; canMassReset?: boolean; canTransferEdits?: boolean
+  canExportAll?: boolean; isComparing?: boolean; children?: React.ReactNode; mobileSelector?: React.ReactNode
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onUndo, onRedo, onMassReset, onOpenTransferEdits, onZoomIn, onZoomOut,
-  onToggleCompare, onToggleGrab, isGrabActive = false, onExport, onOpenAI,
+  onToggleCompare, onToggleGrab, isGrabActive = false, onExport, onExportAll, onOpenAI,
   canUndo = false, canRedo = false, canMassReset = false, canTransferEdits = false,
-  isComparing = false, children, mobileSelector,
+  canExportAll = false, isComparing = false, children, mobileSelector,
 }) => {
   return (
     <header className="h-11 min-h-[44px] bg-[#16161C] border-b border-[#242430] flex items-center justify-between px-2 sm:px-3 gap-1.5 select-none z-20">
@@ -112,6 +99,18 @@ export const Header: React.FC<HeaderProps> = ({
           <Download className="w-3 h-3 text-white" />
           <span className="hidden sm:inline">Export</span>
         </Button>
+        {canExportAll && (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={onExportAll}
+            title="Export All Open Photos"
+            className="text-xs px-2 py-1 bg-[#1D4ED8] hover:bg-[#1E40AF] flex items-center gap-1"
+          >
+            <FolderDown className="w-3 h-3 text-white" />
+            <span className="hidden sm:inline">Export All</span>
+          </Button>
+        )}
       </div>
 
       {/* 4. Desktop Right Controls */}
@@ -218,6 +217,20 @@ export const Header: React.FC<HeaderProps> = ({
           <Download className="w-3 h-3 text-[#F4F4F6]" />
           <span>Export</span>
         </Button>
+
+        {canExportAll && (
+          <Tooltip content="Batch Export All Open Photos">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onExportAll}
+              className="text-xs bg-[#2563EB] hover:bg-[#1D4ED8] border-[#3B82F6] text-white"
+            >
+              <FolderDown className="w-3 h-3 text-white" />
+              <span>Export All</span>
+            </Button>
+          </Tooltip>
+        )}
       </div>
     </header>
   )
