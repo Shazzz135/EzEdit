@@ -1,5 +1,5 @@
 import React from 'react'
-import { Stamp, Sparkles, Target, Eraser, RotateCcw, Info, Loader2, Cpu } from 'lucide-react'
+import { Stamp, Sparkles, Target, Eraser, RotateCcw, Info, Loader2 } from 'lucide-react'
 import { type RetouchTool, type RetouchSettings, type InpaintingMethod, type Point } from './types'
 import { PrecisionSlider } from '@/components/ui/PrecisionSlider'
 
@@ -14,7 +14,7 @@ export interface RetouchPanelProps {
   onChangeRadius: (r: number) => void
   onChangeHardness: (h: number) => void
   onChangeOpacity: (o: number) => void
-  onChangeInpaintMethod: (m: InpaintingMethod) => void
+  onChangeInpaintMethod?: (m: InpaintingMethod) => void
   onChangeInpaintPrompt: (p: string) => void
   onClearSourcePoint: () => void
   onClearMask?: () => void
@@ -24,7 +24,7 @@ export interface RetouchPanelProps {
 export const RetouchPanel: React.FC<RetouchPanelProps> = ({
   tool, settings, sourcePoint, hasMask = false, isProcessingInpaint = false, inpaintProgress = 0,
   onSelectTool, onChangeRadius, onChangeHardness, onChangeOpacity,
-  onChangeInpaintMethod, onChangeInpaintPrompt, onClearSourcePoint, onClearMask, onExecuteInpaint,
+  onChangeInpaintPrompt, onClearSourcePoint, onClearMask, onExecuteInpaint,
 }) => {
   const isRemoveMode = tool === 'object-remove'
 
@@ -111,12 +111,12 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
       {/* ================= BOLD SECTION SEPARATOR ================= */}
       <div className="h-[2px] bg-[#323246] w-full rounded-full" />
 
-      {/* ================= SECTION 2: REMOVE ================= */}
+      {/* ================= SECTION 2: REMOVE (AI INPAINTING) ================= */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between border-b border-[#222230] pb-2">
           <div className="flex items-center gap-1.5">
             <Eraser className="w-4 h-4 text-[#EF4444]" />
-            <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">Remove</span>
+            <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">Remove (AI)</span>
           </div>
           {hasMask && onClearMask && (
             <button
@@ -151,7 +151,7 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
 
         <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[#161622]/60 border border-[#222232] text-[#A0A0B2] text-[11px] leading-relaxed">
           <Info className="w-3.5 h-3.5 mt-0.5 text-[#EF4444] flex-shrink-0" />
-          <span>Paint over unwanted objects with the mask brush, then click Remove Masked Object below. Right-click to clear mask.</span>
+          <span>Paint over unwanted objects with the mask brush, enter an optional AI prompt, and click Remove Masked Object. Right-click to clear mask.</span>
         </div>
 
         <PrecisionSlider
@@ -168,41 +168,14 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
           }}
         />
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-medium text-[#808096] uppercase tracking-wider">Inpainting Method</span>
-          <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#161622] rounded-lg border border-[#222230]">
-            <button
-              type="button"
-              onClick={() => { if (!isRemoveMode) onSelectTool('object-remove'); onChangeInpaintMethod('local-patch') }}
-              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md transition-colors cursor-pointer ${
-                settings.inpaintMethod === 'local-patch' ? 'bg-[#222234] text-[#60A5FA] font-medium' : 'text-[#9090A0] hover:text-[#E0E0EC]'
-              }`}
-            >
-              <Cpu className="w-3.5 h-3.5" />
-              <span>Local Patch</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => { if (!isRemoveMode) onSelectTool('object-remove'); onChangeInpaintMethod('pollinations-ai') }}
-              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md transition-colors cursor-pointer ${
-                settings.inpaintMethod === 'pollinations-ai' ? 'bg-[#222234] text-[#60A5FA] font-medium' : 'text-[#9090A0] hover:text-[#E0E0EC]'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Pollinations AI</span>
-            </button>
-          </div>
-        </div>
-
-        {settings.inpaintMethod === 'pollinations-ai' && (
-          <input
-            type="text"
-            placeholder="Prompt (optional, e.g. seamless clean grass)"
-            value={settings.inpaintPrompt}
-            onChange={(e) => onChangeInpaintPrompt(e.target.value)}
-            className="w-full bg-[#161622] border border-[#2A2A3C] rounded px-2.5 py-1.5 text-xs text-[#E0E0EC] placeholder-[#606074] focus:outline-none focus:border-[#60A5FA]"
-          />
-        )}
+        <input
+          type="text"
+          placeholder="AI Prompt (optional, e.g. seamless clean grass)"
+          value={settings.inpaintPrompt}
+          onFocus={() => { if (!isRemoveMode) onSelectTool('object-remove') }}
+          onChange={(e) => onChangeInpaintPrompt(e.target.value)}
+          className="w-full bg-[#161622] border border-[#2A2A3C] rounded px-2.5 py-1.5 text-xs text-[#E0E0EC] placeholder-[#606074] focus:outline-none focus:border-[#60A5FA]"
+        />
 
         {isProcessingInpaint && (
           <div className="w-full bg-[#1E1E2C] rounded-full h-1.5 overflow-hidden">
@@ -223,8 +196,8 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
             </>
           ) : (
             <>
-              <Eraser className="w-3.5 h-3.5" />
-              <span>Remove Masked Object</span>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Remove Masked Object (AI)</span>
             </>
           )}
         </button>

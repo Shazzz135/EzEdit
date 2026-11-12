@@ -1,6 +1,5 @@
 export * from './types'
 export * from './retouchMath'
-export * from './inpaintingMath'
 export * from './executeInpainting'
 export * from './pollinationsInpaint'
 export * from './useRetouchState'

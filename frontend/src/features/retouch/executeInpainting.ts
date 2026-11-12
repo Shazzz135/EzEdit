@@ -1,9 +1,7 @@
 import { type Point, type MaskStroke } from './types'
-import { runInpaintingMath } from './inpaintingMath'
 import { executePollinationsInpainting } from './pollinationsInpaint'
 
 export interface ExecuteInpaintingOptions {
-  method: 'local-patch' | 'pollinations-ai'
   prompt?: string
   brushRadius?: number
   maskStrokes?: MaskStroke[]
@@ -52,7 +50,6 @@ export async function executeInpainting(
     mCtx.lineCap = 'round'
     mCtx.lineJoin = 'round'
 
-    // Render painted brush strokes with their brush radius
     const strokesToDraw: MaskStroke[] = options.maskStrokes
       ? options.maskStrokes
       : (options.maskPaths ?? []).map((points) => ({
@@ -79,7 +76,6 @@ export async function executeInpainting(
       }
     }
 
-    // Also fill any active vector selection polygons
     for (const poly of options.vectorPaths ?? []) {
       if (poly.length < 3) continue
       mCtx.beginPath()
@@ -96,97 +92,49 @@ export async function executeInpainting(
     throw new Error('No inpainting mask provided')
   }
 
-  // 3. Try Pollinations.ai Generative Inpainting if requested
-  if (options.method === 'pollinations-ai') {
-    options.onProgress?.(0.3)
-    const aiBlob = await executePollinationsInpainting(imageSrc, {
-      prompt: options.prompt,
-      width,
-      height,
-    })
+  // 3. Execute Pollinations.ai Generative Inpainting
+  options.onProgress?.(0.3)
+  const aiBlob = await executePollinationsInpainting(imageSrc, {
+    prompt: options.prompt,
+    width,
+    height,
+  })
 
-    if (aiBlob) {
-      options.onProgress?.(0.8)
-      const aiUrl = URL.createObjectURL(aiBlob)
-      try {
-        const aiImg = await loadImage(aiUrl)
-        const aiCanvas = document.createElement('canvas')
-        aiCanvas.width = width
-        aiCanvas.height = height
-        const aiCtx = aiCanvas.getContext('2d')
-        if (aiCtx) {
-          aiCtx.drawImage(aiImg, 0, 0, width, height)
-          const aiData = aiCtx.getImageData(0, 0, width, height).data
-          const outData = imgData.data
-
-          for (let i = 0; i < width * height; i++) {
-            const mVal = maskBuffer[i * 4] || maskBuffer[i * 4 + 3]
-            if (mVal > 32) {
-              const idx = i * 4
-              outData[idx] = aiData[idx]
-              outData[idx + 1] = aiData[idx + 1]
-              outData[idx + 2] = aiData[idx + 2]
-              outData[idx + 3] = 255
-            }
-          }
-          ctx.putImageData(imgData, 0, 0)
-          options.onProgress?.(1.0)
-          return canvasToResult(canvas, width, height)
-        }
-      } finally {
-        URL.revokeObjectURL(aiUrl)
-      }
-    }
+  if (!aiBlob) {
+    throw new Error('Pollinations.ai inpainting service unavailable')
   }
 
-  // 4. Local Web Worker Inpainting (or direct calculation if Worker unavailable)
-  const resultData = await runWorkerInpainting(imgData.data, maskBuffer, width, height, options.onProgress)
-  const finalImageData = ctx.createImageData(width, height)
-  finalImageData.data.set(resultData)
-  ctx.putImageData(finalImageData, 0, 0)
+  options.onProgress?.(0.8)
+  const aiUrl = URL.createObjectURL(aiBlob)
+  try {
+    const aiImg = await loadImage(aiUrl)
+    const aiCanvas = document.createElement('canvas')
+    aiCanvas.width = width
+    aiCanvas.height = height
+    const aiCtx = aiCanvas.getContext('2d')
+    if (aiCtx) {
+      aiCtx.drawImage(aiImg, 0, 0, width, height)
+      const aiData = aiCtx.getImageData(0, 0, width, height).data
+      const outData = imgData.data
 
-  return canvasToResult(canvas, width, height)
-}
-
-function runWorkerInpainting(
-  imgData: Uint8ClampedArray,
-  maskBuffer: Uint8ClampedArray,
-  width: number,
-  height: number,
-  onProgress?: (progress: number) => void
-): Promise<Uint8ClampedArray> {
-  return new Promise((resolve) => {
-    if (typeof Worker !== 'undefined') {
-      try {
-        const worker = new Worker(new URL('./inpainting.worker.ts', import.meta.url), { type: 'module' })
-        let settled = false
-        const finishFallback = () => {
-          if (settled) return
-          settled = true
-          worker.terminate()
-          resolve(runInpaintingMath(imgData, maskBuffer, width, height, onProgress))
+      for (let i = 0; i < width * height; i++) {
+        const mVal = maskBuffer[i * 4] || maskBuffer[i * 4 + 3]
+        if (mVal > 32) {
+          const idx = i * 4
+          outData[idx] = aiData[idx]
+          outData[idx + 1] = aiData[idx + 1]
+          outData[idx + 2] = aiData[idx + 2]
+          outData[idx + 3] = 255
         }
-        worker.onmessage = (e) => {
-          if (settled) return
-          if (e.data.type === 'progress') {
-            onProgress?.(e.data.progress)
-          } else if (e.data.type === 'complete' && e.data.result?.length === imgData.length) {
-            settled = true
-            worker.terminate()
-            resolve(e.data.result)
-          } else if (e.data.type === 'error') {
-            finishFallback()
-          }
-        }
-        worker.onerror = finishFallback
-        worker.postMessage({ imageBuffer: imgData, maskBuffer, width, height })
-        return
-      } catch {
-        // Fallback to sync math
       }
+      ctx.putImageData(imgData, 0, 0)
     }
-    resolve(runInpaintingMath(imgData, maskBuffer, width, height, onProgress))
-  })
+  } finally {
+    URL.revokeObjectURL(aiUrl)
+  }
+
+  options.onProgress?.(1.0)
+  return canvasToResult(canvas, width, height)
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {

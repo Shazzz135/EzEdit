@@ -1,6 +1,6 @@
 export type RetouchTool = 'clone-stamp' | 'healing-brush' | 'spot-heal' | 'object-remove'
 
-export type InpaintingMethod = 'local-patch' | 'pollinations-ai'
+export type InpaintingMethod = 'pollinations-ai'
 
 export interface Point {
   x: number
