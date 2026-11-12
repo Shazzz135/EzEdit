@@ -35,9 +35,7 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
         <div className="flex items-center justify-between border-b border-[#222230] pb-2">
           <div className="flex items-center gap-1.5">
             <Stamp className="w-4 h-4 text-[#60A5FA]" />
-            <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">
-              Retouch
-            </span>
+            <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">Retouch</span>
           </div>
           {!isRemoveMode && sourcePoint && (
             <button
@@ -88,21 +86,14 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
           </button>
         </div>
 
-        {/* Retouch Instructions & Brush Controls */}
         {!isRemoveMode && (
           <>
             <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[#161622]/60 border border-[#222232] text-[#A0A0B2] text-[11px] leading-relaxed">
               <Info className="w-3.5 h-3.5 mt-0.5 text-[#60A5FA] flex-shrink-0" />
               <div>
-                {tool === 'spot-heal' && (
-                  <span>Click directly on blemishes or spots to auto-blend with surrounding texture.</span>
-                )}
-                {tool !== 'spot-heal' && !sourcePoint && (
-                  <span><strong className="text-[#60A5FA]">Right-Click</strong> (or hold Alt+Click) on the canvas to set the sample anchor.</span>
-                )}
-                {tool !== 'spot-heal' && sourcePoint && (
-                  <span>Anchor set at ({sourcePoint.x}, {sourcePoint.y}). Drag to retouch, or right-click to move anchor.</span>
-                )}
+                {tool === 'spot-heal' && <span>Click directly on blemishes or spots to auto-blend with surrounding texture.</span>}
+                {tool !== 'spot-heal' && !sourcePoint && <span><strong className="text-[#60A5FA]">Right-Click</strong> (or hold Alt+Click) on the canvas to set the sample anchor.</span>}
+                {tool !== 'spot-heal' && sourcePoint && <span>Anchor set at ({sourcePoint.x}, {sourcePoint.y}). Drag to retouch, or right-click to move anchor.</span>}
               </div>
             </div>
 
@@ -125,9 +116,7 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
         <div className="flex items-center justify-between border-b border-[#222230] pb-2">
           <div className="flex items-center gap-1.5">
             <Eraser className="w-4 h-4 text-[#EF4444]" />
-            <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">
-              Remove
-            </span>
+            <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">Remove</span>
           </div>
           {hasMask && onClearMask && (
             <button
@@ -142,7 +131,6 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
           )}
         </div>
 
-        {/* Activate Removal Brush Tool Button */}
         <button
           type="button"
           onClick={() => onSelectTool('object-remove')}
@@ -180,16 +168,12 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
           }}
         />
 
-        {/* Inpainting Method Selector */}
         <div className="flex flex-col gap-1.5">
           <span className="text-[11px] font-medium text-[#808096] uppercase tracking-wider">Inpainting Method</span>
           <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#161622] rounded-lg border border-[#222230]">
             <button
               type="button"
-              onClick={() => {
-                if (!isRemoveMode) onSelectTool('object-remove')
-                onChangeInpaintMethod('local-patch')
-              }}
+              onClick={() => { if (!isRemoveMode) onSelectTool('object-remove'); onChangeInpaintMethod('local-patch') }}
               className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md transition-colors cursor-pointer ${
                 settings.inpaintMethod === 'local-patch' ? 'bg-[#222234] text-[#60A5FA] font-medium' : 'text-[#9090A0] hover:text-[#E0E0EC]'
               }`}
@@ -199,10 +183,7 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (!isRemoveMode) onSelectTool('object-remove')
-                onChangeInpaintMethod('pollinations-ai')
-              }}
+              onClick={() => { if (!isRemoveMode) onSelectTool('object-remove'); onChangeInpaintMethod('pollinations-ai') }}
               className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md transition-colors cursor-pointer ${
                 settings.inpaintMethod === 'pollinations-ai' ? 'bg-[#222234] text-[#60A5FA] font-medium' : 'text-[#9090A0] hover:text-[#E0E0EC]'
               }`}
