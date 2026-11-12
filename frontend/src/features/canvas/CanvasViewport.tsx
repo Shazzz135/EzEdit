@@ -4,7 +4,7 @@ import { WebGLCanvas } from '@/features/adjustments'
 import { EmptyCanvasDropzone } from './EmptyCanvasDropzone'
 import { SplitCompareOverlay } from './SplitCompareOverlay'
 import { type DocumentState } from '@/types/document'
-import { Maximize2, RotateCcw, Columns, Eye } from 'lucide-react'
+import { Maximize2, RotateCcw, Columns, Eye, Hand } from 'lucide-react'
 
 export interface CanvasViewportProps {
   document?: DocumentState
@@ -78,24 +78,16 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     }
   }, [panZoom, onHoldCompareChange])
 
+  const isGrabMode = panZoom.isSpacePressed || panZoom.isHandToolActive
+
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (isPrecisionToolActive && !panZoom.isSpacePressed && e.button !== 1) return
+    if (isPrecisionToolActive && !isGrabMode && e.button !== 1) return
     if (e.button === 0 || e.button === 1 || e.pointerType === 'touch') panZoom.startPan(e.clientX, e.clientY)
   }
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (panZoom.isPanning) panZoom.updatePan(e.clientX, e.clientY)
-  }
-
-  const handlePointerUp = () => {
-    if (panZoom.isPanning) panZoom.endPan()
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'copy'
-  }
-
+  const handlePointerMove = (e: React.PointerEvent) => { if (panZoom.isPanning) panZoom.updatePan(e.clientX, e.clientY) }
+  const handlePointerUp = () => { if (panZoom.isPanning) panZoom.endPan() }
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     const file = e.dataTransfer.files?.[0]
@@ -125,7 +117,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       className={`relative w-full h-full overflow-hidden flex items-center justify-center select-none touch-none ${
         panZoom.isPanning
           ? 'cursor-grabbing'
-          : !isPrecisionToolActive || panZoom.isSpacePressed
+          : isGrabMode || !isPrecisionToolActive
             ? 'cursor-grab'
             : 'cursor-default'
       }`}
@@ -204,6 +196,16 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         </button>
         <button type="button" onClick={panZoom.resetZoom} title="Reset View" className="p-1 hover:text-[#60A5FA] text-[#808094] cursor-pointer">
           <RotateCcw className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={panZoom.toggleHandTool}
+          title="Hand Tool / Pan (Space)"
+          className={`p-1 transition-colors cursor-pointer rounded ${
+            panZoom.isHandToolActive || panZoom.isSpacePressed ? 'text-[#60A5FA] bg-[#222234]' : 'text-[#808094] hover:text-[#60A5FA]'
+          }`}
+        >
+          <Hand className="w-3.5 h-3.5" />
         </button>
 
         <div className="w-[1px] h-3 bg-[#2A2A38] mx-0.5" />

@@ -91,12 +91,13 @@ export function useSelectionState(isSelectionActive = true, actions?: SelectionA
         return
       }
 
-      // Ctrl+X: Cut selection
-      if (isModifier && (e.key === 'x' || e.key === 'X') && state.hasSelection) {
+      // Ctrl+X or Backspace/Delete: Cut selection
+      if (((isModifier && (e.key === 'x' || e.key === 'X')) || e.key === 'Backspace' || e.key === 'Delete') && state.hasSelection) {
         if (actionsRef.current?.onCut) {
           e.preventDefault()
           actionsRef.current.onCut()
         }
+        return
       }
     }
 

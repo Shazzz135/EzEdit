@@ -19,6 +19,7 @@ export const useCanvasPanZoom = () => {
   const [scale, setScale] = useState(1.0)
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 })
   const [isSpacePressed, setIsSpacePressed] = useState(false)
+  const [isHandToolActive, setIsHandToolActive] = useState(false)
   const [isPanning, setIsPanning] = useState(false)
   const dragStartRef = useRef<Point>({ x: 0, y: 0 })
   const offsetStartRef = useRef<Point>({ x: 0, y: 0 })
@@ -141,12 +142,19 @@ export const useCanvasPanZoom = () => {
     [scale, offset]
   )
 
+  const toggleHandTool = useCallback(() => {
+    setIsHandToolActive((prev) => !prev)
+  }, [])
+
   return {
     scale,
     offset,
     isPanning,
     isSpacePressed,
     setIsSpacePressed,
+    isHandToolActive,
+    setIsHandToolActive,
+    toggleHandTool,
     zoomTo,
     zoomIn,
     zoomOut,

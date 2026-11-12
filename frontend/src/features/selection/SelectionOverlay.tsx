@@ -35,6 +35,28 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
   const animFrameRef = useRef<number | null>(null)
   const dashOffsetRef = useRef<number>(0)
 
+  const [prevPathsLen, setPrevPathsLen] = useState(paths.length)
+  if (prevPathsLen !== paths.length) {
+    setPrevPathsLen(paths.length)
+    if (paths.length === 0) {
+      setActivePoints([])
+      setIsDrawing(false)
+    }
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isModifier = e.ctrlKey || e.metaKey
+      if (e.key === 'Escape' || (isModifier && (e.key === 'd' || e.key === 'D'))) {
+        setActivePoints([])
+        setIsDrawing(false)
+        onDeselect?.()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onDeselect])
+
   // Map pointer client coordinates to image canvas coordinates
   const getImageCoords = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>): Point => {
