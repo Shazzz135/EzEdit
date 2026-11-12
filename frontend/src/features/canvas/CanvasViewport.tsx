@@ -142,6 +142,10 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           transformOrigin: 'center center',
           width: `${activeDoc.currentWidth}px`,
           height: `${activeDoc.currentHeight}px`,
+          backgroundImage: 'linear-gradient(45deg, #1A1A26 25%, transparent 25%), linear-gradient(-45deg, #1A1A26 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1A1A26 75%), linear-gradient(-45deg, transparent 75%, #1A1A26 75%)',
+          backgroundSize: '16px 16px',
+          backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0px',
+          backgroundColor: '#12121A',
         }}
         className="relative transition-transform duration-75 ease-out shadow-2xl flex-shrink-0"
       >

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
 import { ToolsPanel } from '@/components/layout/ToolsPanel'
 import { WorkspaceModals } from '@/components/layout/WorkspaceModals'
@@ -8,6 +8,7 @@ import { CanvasViewport } from '@/features/canvas/CanvasViewport'
 import { useCropState, CropOverlay, executeCrop } from '@/features/crop'
 import { RotateHandle } from '@/features/orientation'
 import { useSelectionState, SelectionOverlay, copySelection, cutSelection } from '@/features/selection'
+import { useBackgroundRemoval } from '@/features/cutout'
 import { useImageImport } from '@/features/canvas/useImageImport'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { useDocumentPersistence } from '@/features/tabs/useDocumentPersistence'
@@ -48,32 +49,48 @@ export const App: React.FC = () => {
   const { oversizedFile, setOversizedFile, handleDropFile, handleDownscaleAndImport } =
     useImageImport(() => setTabLimitModalOpen(true))
 
-  useUndoRedoShortcuts(activeDoc, undo, redo)
-
-  const handleApplyTransform = (result: TransformResult) => {
+  const handleApplyTransform = useCallback((result: TransformResult) => {
     if (!activeDoc) return
-    applyRasterTransform(activeDoc.id, {
-      url: result.url,
-      blob: result.blob,
-      width: result.width,
-      height: result.height,
-    })
+    applyRasterTransform(activeDoc.id, { url: result.url, blob: result.blob, width: result.width, height: result.height })
+  }, [activeDoc, applyRasterTransform])
+
+  const cutout = useBackgroundRemoval(activeDoc, handleApplyTransform, selection.clearSelection)
+
+  const resetToolStates = useCallback(() => {
+    crop.cancelCrop()
+    selection.clearSelection()
+    setRotationAngle(0)
+    setPreviewScale(undefined)
+    setSplitActive(false)
+    setIsHoldComparing(false)
+  }, [crop, selection])
+
+  const [prevDocId, setPrevDocId] = useState(activeDocumentId)
+  if (prevDocId !== activeDocumentId) {
+    setPrevDocId(activeDocumentId)
+    crop.cancelCrop()
+    selection.clearSelection()
+    setRotationAngle(0)
+    setPreviewScale(undefined)
+    setSplitActive(false)
+    setIsHoldComparing(false)
   }
+
+  useUndoRedoShortcuts(activeDoc, undo, redo)
 
   const handleApplyCrop = async () => {
     if (!activeDoc || !crop.cropRect) return
     try {
-      const result = await executeCrop(activeDoc.imageSrc, crop.cropRect)
-      handleApplyTransform(result)
+      const res = await executeCrop(activeDoc.imageSrc, crop.cropRect)
+      handleApplyTransform(res)
       crop.cancelCrop()
-    } catch (err) {
-      console.error('Failed to apply crop:', err)
-    }
+    } catch (e) { console.error('Failed to apply crop:', e) }
   }
 
   const handleCopySelection = async () => {
-    if (!activeDoc || !selection.state.hasSelection) return
-    await copySelection(activeDoc.imageSrc, selection.state.paths, selection.state.inverted, selection.state.feather)
+    if (activeDoc && selection.state.hasSelection) {
+      await copySelection(activeDoc.imageSrc, selection.state.paths, selection.state.inverted, selection.state.feather)
+    }
   }
 
   const handleCutSelection = async () => {
@@ -90,9 +107,7 @@ export const App: React.FC = () => {
 
   const mobileSelector = (
     <MobileDocumentSelector
-      documents={documents}
-      activeDocumentId={activeDocumentId}
-      onSelectDocument={setActiveDocument}
+      documents={documents} activeDocumentId={activeDocumentId} onSelectDocument={setActiveDocument}
       onCloseDocument={(id) => {
         const doc = documents.find((d) => d.id === id)
         if (doc?.isModified) setUnsavedDoc({ id, name: doc.name })
@@ -121,7 +136,7 @@ export const App: React.FC = () => {
         headerProps={{
           onUndo: canUndo ? () => undo(activeDoc!.id) : undefined,
           onRedo: canRedo ? () => redo(activeDoc!.id) : undefined,
-          onOpenAI: () => setActiveCategory('ai'),
+          onOpenAI: () => { setActiveCategory('ai'); resetToolStates(); },
           canUndo, canRedo, mobileSelector,
         }}
         canvasContent={
@@ -130,47 +145,29 @@ export const App: React.FC = () => {
             onDropImage={handleDropFile}
             previewScale={previewScale}
             rotationAngle={rotationAngle}
-            splitActive={splitActive}
+            splitActive={activeCategory === 'filters' && splitActive}
             splitPosition={splitPosition}
             onChangeSplitPosition={setSplitPosition}
-            isHoldComparing={isHoldComparing}
+            isHoldComparing={activeCategory === 'filters' && isHoldComparing}
             onHoldCompareChange={setIsHoldComparing}
             onToggleSplit={() => setSplitActive((v) => !v)}
-            rotateOverlay={
-              activeDoc && activeCategory === 'orientation' && !crop.isCropActive ? (
-                <RotateHandle rotationAngle={rotationAngle} onRotateChange={setRotationAngle} />
-              ) : undefined
-            }
-            selectionOverlay={
-              activeDoc && activeCategory === 'selection'
-                ? (scale) => (
-                    <SelectionOverlay
-                      imageWidth={activeDoc.currentWidth}
-                      imageHeight={activeDoc.currentHeight}
-                      zoomScale={scale}
-                      tool={selection.state.tool}
-                      paths={selection.state.paths}
-                      onCommitPath={selection.commitPath}
-                    />
-                  )
-                : undefined
-            }
-            isPrecisionToolActive={crop.isCropActive || activeCategory === 'selection'}
-            cropOverlay={
-              activeDoc && crop.isCropActive && crop.cropRect
-                ? (scale) => (
-                    <CropOverlay
-                      imageWidth={activeDoc.currentWidth}
-                      imageHeight={activeDoc.currentHeight}
-                      cropRect={crop.cropRect!}
-                      aspectRatio={crop.aspectRatio}
-                      zoomScale={scale}
-                      onChange={crop.updateCrop}
-                      onDragStateChange={crop.setIsDragging}
-                    />
-                  )
-                : undefined
-            }
+            rotateOverlay={activeDoc && activeCategory === 'orientation' && !crop.isCropActive ? (
+              <RotateHandle rotationAngle={rotationAngle} onRotateChange={setRotationAngle} />
+            ) : undefined}
+            selectionOverlay={activeDoc && activeCategory === 'selection' ? (scale) => (
+              <SelectionOverlay
+                imageWidth={activeDoc.currentWidth} imageHeight={activeDoc.currentHeight} zoomScale={scale}
+                tool={selection.state.tool} paths={selection.state.paths} onCommitPath={selection.commitPath}
+              />
+            ) : undefined}
+            isPrecisionToolActive={(activeCategory === 'orientation' && crop.isCropActive) || activeCategory === 'selection'}
+            cropOverlay={activeDoc && activeCategory === 'orientation' && crop.isCropActive && crop.cropRect ? (scale) => (
+              <CropOverlay
+                imageWidth={activeDoc.currentWidth} imageHeight={activeDoc.currentHeight}
+                cropRect={crop.cropRect!} aspectRatio={crop.aspectRatio} zoomScale={scale}
+                onChange={crop.updateCrop} onDragStateChange={crop.setIsDragging}
+              />
+            ) : undefined}
           />
         }
         toolsContent={
@@ -178,42 +175,34 @@ export const App: React.FC = () => {
             activeCategory={activeCategory}
             onSelectCategory={(cat) => {
               setActiveCategory(cat)
-              if (cat !== 'orientation') setRotationAngle(0)
+              resetToolStates()
             }}
             activeDoc={activeDoc}
             onUpdateAdjustments={updateAdjustments}
             onResetAdjustments={resetAdjustments}
             onUpdateFilter={updateFilter}
             onResetFilter={resetFilter}
-            splitActive={splitActive}
-            onToggleSplit={() => setSplitActive((v) => !v)}
-            splitPosition={splitPosition}
-            onChangeSplitPosition={setSplitPosition}
+            splitActive={splitActive} onToggleSplit={() => setSplitActive((v) => !v)}
+            splitPosition={splitPosition} onChangeSplitPosition={setSplitPosition}
             isHoldComparing={isHoldComparing}
-            onHoldCompareStart={() => setIsHoldComparing(true)}
-            onHoldCompareEnd={() => setIsHoldComparing(false)}
-            onApplyTransform={handleApplyTransform}
-            onPreviewScaleChange={setPreviewScale}
-            rotationAngle={rotationAngle}
-            onRotateChange={setRotationAngle}
+            onHoldCompareStart={() => setIsHoldComparing(true)} onHoldCompareEnd={() => setIsHoldComparing(false)}
+            onApplyTransform={handleApplyTransform} onPreviewScaleChange={setPreviewScale}
+            rotationAngle={rotationAngle} onRotateChange={setRotationAngle}
             selectionProps={{
-              state: selection.state,
-              onSelectTool: selection.setTool,
-              onSelectMode: selection.setMode,
-              onChangeFeather: selection.setFeather,
-              onToggleInvert: selection.toggleInvert,
-              onClearSelection: selection.clearSelection,
-              onCopySelection: handleCopySelection,
-              onCutSelection: handleCutSelection,
+              state: selection.state, onSelectTool: selection.setTool, onSelectMode: selection.setMode,
+              onChangeFeather: selection.setFeather, onToggleInvert: selection.toggleInvert,
+              onClearSelection: selection.clearSelection, onCopySelection: handleCopySelection, onCutSelection: handleCutSelection,
+            }}
+            cutoutProps={{
+              hasSelection: selection.state.hasSelection, isProcessing: cutout.isProcessing,
+              onExecuteAutoCutout: cutout.handleAutoCutout,
+              onExecuteSelectionCutout: (inv) => cutout.handleSelectionCutout(inv, selection.state.paths),
             }}
             cropProps={{
-              isCropActive: crop.isCropActive,
-              cropRect: crop.cropRect,
-              aspectRatio: crop.aspectRatio,
+              isCropActive: crop.isCropActive, cropRect: crop.cropRect, aspectRatio: crop.aspectRatio,
               onStartCrop: () => activeDoc && crop.startCrop(activeDoc.currentWidth, activeDoc.currentHeight),
               onSelectRatio: (r) => activeDoc && crop.setAspectRatio(r, activeDoc.currentWidth, activeDoc.currentHeight),
-              onApplyCrop: handleApplyCrop,
-              onCancelCrop: crop.cancelCrop,
+              onApplyCrop: handleApplyCrop, onCancelCrop: crop.cancelCrop,
               onResetCrop: () => activeDoc && crop.startCrop(activeDoc.currentWidth, activeDoc.currentHeight),
             }}
           />

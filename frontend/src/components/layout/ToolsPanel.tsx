@@ -4,6 +4,7 @@ import { OrientationPanel } from '@/features/orientation'
 import { AdjustmentsPanel } from '@/features/adjustments'
 import { FiltersPanel } from '@/features/filters'
 import { SelectionPanel, type SelectionPanelProps } from '@/features/selection'
+import { CutoutPanel, type CutoutPanelProps } from '@/features/cutout'
 import { type CropPanelProps } from '@/features/crop/CropPanel'
 import { type DocumentState, type AdjustmentValues, type FilterState } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
@@ -47,6 +48,7 @@ export interface ToolsPanelProps {
   onHoldCompareStart?: () => void
   onHoldCompareEnd?: () => void
   selectionProps?: SelectionPanelProps
+  cutoutProps?: CutoutPanelProps
 }
 
 export const ToolsPanel: React.FC<ToolsPanelProps> = ({
@@ -70,7 +72,9 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   onHoldCompareStart = () => {},
   onHoldCompareEnd = () => {},
   selectionProps,
+  cutoutProps,
 }) => {
+  const [selectionSubTab, setSelectionSubTab] = React.useState<'vector' | 'cutout'>('vector')
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Category Dropdown Selector at Top */}
@@ -119,8 +123,37 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
           />
         )}
 
-        {activeDoc && activeCategory === 'selection' && selectionProps && (
-          <SelectionPanel {...selectionProps} />
+        {activeDoc && activeCategory === 'selection' && (
+          <div className="flex flex-col gap-3">
+            <div className="flex rounded-lg bg-[#14141E] p-0.5 border border-[#242432]">
+              <button
+                type="button"
+                onClick={() => setSelectionSubTab('vector')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  selectionSubTab === 'vector' ? 'bg-[#20202E] text-[#F4F4F6]' : 'text-[#808092] hover:text-[#D0D0E0]'
+                }`}
+              >
+                Vector Selection
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectionSubTab('cutout')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  selectionSubTab === 'cutout' ? 'bg-[#20202E] text-[#F4F4F6]' : 'text-[#808092] hover:text-[#D0D0E0]'
+                }`}
+              >
+                Background Removal
+              </button>
+            </div>
+
+            {selectionSubTab === 'vector' && selectionProps && (
+              <SelectionPanel {...selectionProps} />
+            )}
+
+            {selectionSubTab === 'cutout' && cutoutProps && (
+              <CutoutPanel {...cutoutProps} />
+            )}
+          </div>
         )}
 
         {activeDoc && activeCategory !== 'orientation' && activeCategory !== 'adjustments' && activeCategory !== 'filters' && activeCategory !== 'selection' && (
