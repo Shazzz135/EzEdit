@@ -43,10 +43,20 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
   }, [transform.previewScale, onPreviewScaleChange])
 
   const handleRatioSelect = (ratio: AspectRatio) => {
+    if (rotationAngle !== 0) onRotateChange(0)
+    transform.resetStretch()
+    transform.resetResize()
     if (!cropProps.isCropActive) {
       cropProps.onStartCrop()
     }
     cropProps.onSelectRatio(ratio)
+  }
+
+  const handleRotateChange = (angle: number) => {
+    if (cropProps.isCropActive) cropProps.onCancelCrop()
+    transform.resetStretch()
+    transform.resetResize()
+    onRotateChange(angle)
   }
 
   const handleApplyRotation = async () => {
@@ -64,6 +74,8 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
   }
 
   const handleFlip = async (dir: 'horizontal' | 'vertical') => {
+    if (cropProps.isCropActive) cropProps.onCancelCrop()
+    if (rotationAngle !== 0) onRotateChange(0)
     try {
       transform.setIsProcessing(true)
       const res = await executeFlip(doc.imageSrc, dir)
@@ -161,7 +173,7 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
       {/* Section 2: Rotate (0° - 360°) & Flip */}
       <RotateFlipSection
         rotationAngle={rotationAngle}
-        onRotateChange={onRotateChange}
+        onRotateChange={handleRotateChange}
         onApplyRotation={handleApplyRotation}
         onResetRotation={() => onRotateChange(0)}
         onFlip={handleFlip}
@@ -177,8 +189,16 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         height={transform.resizeHeight}
         currentWidth={doc.currentWidth}
         currentHeight={doc.currentHeight}
-        onWidthChange={transform.handleWidthChange}
-        onHeightChange={transform.handleHeightChange}
+        onWidthChange={(w) => {
+          if (cropProps.isCropActive) cropProps.onCancelCrop()
+          if (rotationAngle !== 0) onRotateChange(0)
+          transform.handleWidthChange(w)
+        }}
+        onHeightChange={(h) => {
+          if (cropProps.isCropActive) cropProps.onCancelCrop()
+          if (rotationAngle !== 0) onRotateChange(0)
+          transform.handleHeightChange(h)
+        }}
         onResetScale={transform.resetResize}
         onCommitScale={handleApplyScale}
         isProcessing={transform.isProcessing}
@@ -193,8 +213,16 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         scaleY={transform.stretchY}
         currentWidth={doc.currentWidth}
         currentHeight={doc.currentHeight}
-        onScaleXChange={transform.setStretchX}
-        onScaleYChange={transform.setStretchY}
+        onScaleXChange={(sx) => {
+          if (cropProps.isCropActive) cropProps.onCancelCrop()
+          if (rotationAngle !== 0) onRotateChange(0)
+          transform.setStretchX(sx)
+        }}
+        onScaleYChange={(sy) => {
+          if (cropProps.isCropActive) cropProps.onCancelCrop()
+          if (rotationAngle !== 0) onRotateChange(0)
+          transform.setStretchY(sy)
+        }}
         onApplyStretch={handleApplyStretch}
         onResetStretch={transform.resetStretch}
         isProcessing={transform.isProcessing}
