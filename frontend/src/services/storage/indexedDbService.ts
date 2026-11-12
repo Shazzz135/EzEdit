@@ -1,9 +1,12 @@
 import { get, set, del, clear, createStore } from 'idb-keyval'
 import {
   type DocumentState,
+  type DocumentHistoryEntry,
   type AdjustmentValues,
   type OrientationValues,
   type FilterState,
+  defaultAdjustments,
+  defaultOrientation,
   defaultFilterState,
 } from '@/types/document'
 
@@ -41,6 +44,7 @@ export interface StorageQuotaEstimate {
 const SESSION_KEY = 'ezedit_session'
 const META_PREFIX = 'ezedit_meta_'
 const BLOB_PREFIX = 'ezedit_blob_'
+const ORIG_BLOB_PREFIX = 'ezedit_orig_blob_'
 
 export async function saveDocumentBlob(id: string, blob: Blob): Promise<void> {
   await set(`${BLOB_PREFIX}${id}`, blob, ezEditStore)
@@ -48,6 +52,14 @@ export async function saveDocumentBlob(id: string, blob: Blob): Promise<void> {
 
 export async function getDocumentBlob(id: string): Promise<Blob | undefined> {
   return await get<Blob>(`${BLOB_PREFIX}${id}`, ezEditStore)
+}
+
+export async function saveOriginalDocumentBlob(id: string, blob: Blob): Promise<void> {
+  await set(`${ORIG_BLOB_PREFIX}${id}`, blob, ezEditStore)
+}
+
+export async function getOriginalDocumentBlob(id: string): Promise<Blob | undefined> {
+  return await get<Blob>(`${ORIG_BLOB_PREFIX}${id}`, ezEditStore)
 }
 
 export async function saveDocumentMeta(id: string, meta: StoredDocumentMeta): Promise<void> {
@@ -69,6 +81,7 @@ export async function getSession(): Promise<StoredSession | undefined> {
 export async function deleteDocument(id: string): Promise<void> {
   await del(`${META_PREFIX}${id}`, ezEditStore)
   await del(`${BLOB_PREFIX}${id}`, ezEditStore)
+  await del(`${ORIG_BLOB_PREFIX}${id}`, ezEditStore)
 }
 
 export async function clearAllStorage(): Promise<void> {
@@ -111,23 +124,54 @@ export async function loadAllDocuments(): Promise<{
     const blob = await getDocumentBlob(id)
 
     if (meta && blob) {
-      const imageSrc = URL.createObjectURL(blob)
-      const filterState = meta.filter || { ...defaultFilterState }
+      let origBlob = await getOriginalDocumentBlob(id)
+      if (!origBlob) {
+        origBlob = blob
+        await saveOriginalDocumentBlob(id, origBlob)
+      }
+      const originalImageSrc = URL.createObjectURL(origBlob)
+      const imageSrc = origBlob === blob ? originalImageSrc : URL.createObjectURL(blob)
+      const adjustmentsState = meta.adjustments ? { ...defaultAdjustments, ...meta.adjustments } : { ...defaultAdjustments }
+      const orientationState = meta.orientation ? { ...defaultOrientation, ...meta.orientation } : { ...defaultOrientation }
+      const filterState = meta.filter ? { ...meta.filter } : { ...defaultFilterState }
+
+      const baseEntry: DocumentHistoryEntry = {
+        imageSrc: originalImageSrc,
+        imageBlob: origBlob,
+        width: meta.originalWidth || meta.currentWidth,
+        height: meta.originalHeight || meta.currentHeight,
+        adjustments: { ...defaultAdjustments },
+        orientation: { ...defaultOrientation },
+        filter: { ...defaultFilterState },
+      }
+
+      const history: DocumentHistoryEntry[] = meta.isModified
+        ? [
+            baseEntry,
+            {
+              imageSrc,
+              imageBlob: blob,
+              width: meta.currentWidth,
+              height: meta.currentHeight,
+              adjustments: { ...adjustmentsState },
+              orientation: { ...orientationState },
+              filter: { ...filterState },
+            },
+          ]
+        : [baseEntry]
+
       documents.push({
         ...meta,
         imageSrc,
         imageBlob: blob,
+        originalImageSrc,
+        originalImageBlob: origBlob,
+        adjustments: adjustmentsState,
+        orientation: orientationState,
         filter: filterState,
-        history: [{
-          imageSrc,
-          imageBlob: blob,
-          width: meta.currentWidth,
-          height: meta.currentHeight,
-          adjustments: meta.adjustments,
-          orientation: meta.orientation,
-          filter: filterState,
-        }],
-        historyIndex: 0,
+        resetVersion: 0,
+        history,
+        historyIndex: history.length - 1,
       })
     }
   }

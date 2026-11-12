@@ -3,23 +3,19 @@ import { type DocumentState } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
 import { type AspectRatio } from '@/types/crop'
 import { type CropPanelProps } from '@/features/crop/CropPanel'
+import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { useTransformState } from './useTransformState'
 import { CropSection } from './CropSection'
 import { RotateFlipSection } from './RotateFlipSection'
 import { ScaleSection } from './ScaleSection'
 import { StretchSection } from './StretchSection'
-import {
-  executeRotate,
-  executeFlip,
-  executeResize,
-  executeStretch,
-} from './transformService'
+import { executeResize } from './transformService'
 
 export interface OrientationPanelProps {
   document: DocumentState
   cropProps: CropPanelProps
-  rotationAngle: number
-  onRotateChange: (angle: number) => void
+  rotationAngle?: number
+  onRotateChange?: (angle: number) => void
   onApplyTransform: (result: TransformResult) => void
   onPreviewScaleChange?: (scale: { x: number; y: number } | undefined) => void
 }
@@ -27,25 +23,28 @@ export interface OrientationPanelProps {
 export const OrientationPanel: React.FC<OrientationPanelProps> = ({
   document: doc,
   cropProps,
-  rotationAngle,
   onRotateChange,
   onApplyTransform,
   onPreviewScaleChange,
 }) => {
+  const updateOrientation = useDocumentStore((s) => s.updateOrientation)
   const transform = useTransformState({
     currentWidth: doc.currentWidth,
     currentHeight: doc.currentHeight,
   })
 
-  // Propagate real-time stretch and scale preview to canvas
+  const currentRotation = doc.orientation?.rotation ?? 0
+  const currentFlipH = doc.orientation?.flipH ?? false
+  const currentFlipV = doc.orientation?.flipV ?? false
+  const currentScaleX = Math.round((doc.orientation?.scaleX ?? 1) * 100)
+  const currentScaleY = Math.round((doc.orientation?.scaleY ?? 1) * 100)
+
+  // Propagate real-time Scale(px) preview to canvas while typing
   useEffect(() => {
     onPreviewScaleChange?.(transform.previewScale)
   }, [transform.previewScale, onPreviewScaleChange])
 
   const handleRatioSelect = (ratio: AspectRatio) => {
-    if (rotationAngle !== 0) onRotateChange(0)
-    transform.resetStretch()
-    transform.resetResize()
     if (!cropProps.isCropActive) {
       cropProps.onStartCrop()
     }
@@ -54,36 +53,21 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
 
   const handleRotateChange = (angle: number) => {
     if (cropProps.isCropActive) cropProps.onCancelCrop()
-    transform.resetStretch()
-    transform.resetResize()
-    onRotateChange(angle)
+    updateOrientation(doc.id, { rotation: angle })
+    onRotateChange?.(angle)
   }
 
-  const handleApplyRotation = async () => {
-    if (rotationAngle === 0) return
-    try {
-      transform.setIsProcessing(true)
-      const res = await executeRotate(doc.imageSrc, rotationAngle)
-      onApplyTransform(res)
-      onRotateChange(0)
-    } catch (err) {
-      console.error('Failed to rotate image:', err)
-    } finally {
-      transform.setIsProcessing(false)
-    }
+  const handleResetRotationAndFlip = () => {
+    updateOrientation(doc.id, { rotation: 0, flipH: false, flipV: false })
+    onRotateChange?.(0)
   }
 
-  const handleFlip = async (dir: 'horizontal' | 'vertical') => {
+  const handleFlip = (dir: 'horizontal' | 'vertical') => {
     if (cropProps.isCropActive) cropProps.onCancelCrop()
-    if (rotationAngle !== 0) onRotateChange(0)
-    try {
-      transform.setIsProcessing(true)
-      const res = await executeFlip(doc.imageSrc, dir)
-      onApplyTransform(res)
-    } catch (err) {
-      console.error('Failed to flip image:', err)
-    } finally {
-      transform.setIsProcessing(false)
+    if (dir === 'horizontal') {
+      updateOrientation(doc.id, { flipH: !currentFlipH })
+    } else {
+      updateOrientation(doc.id, { flipV: !currentFlipV })
     }
   }
 
@@ -115,6 +99,25 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
     onApplyTransform,
   ])
 
+  const handleResetScaleToOriginal = async () => {
+    transform.resetResize()
+    if (
+      doc.currentWidth !== doc.originalWidth ||
+      doc.currentHeight !== doc.originalHeight
+    ) {
+      try {
+        transform.setIsProcessing(true)
+        const baseSrc = doc.originalImageSrc || doc.history?.[0]?.imageSrc || doc.imageSrc
+        const res = await executeResize(baseSrc, doc.originalWidth, doc.originalHeight)
+        onApplyTransform(res)
+      } catch (err) {
+        console.error('Failed to reset scale:', err)
+      } finally {
+        transform.setIsProcessing(false)
+      }
+    }
+  }
+
   // Auto-scale with debounce when dimensions change
   useEffect(() => {
     if (
@@ -137,23 +140,6 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
     handleApplyScale,
   ])
 
-  const handleApplyStretch = async () => {
-    try {
-      transform.setIsProcessing(true)
-      const res = await executeStretch(
-        doc.imageSrc,
-        transform.stretchX,
-        transform.stretchY
-      )
-      onApplyTransform(res)
-      transform.resetStretch()
-    } catch (err) {
-      console.error('Failed to stretch image:', err)
-    } finally {
-      transform.setIsProcessing(false)
-    }
-  }
-
   return (
     <div className="flex flex-col gap-3 pb-4">
       {/* Section 1: Crop */}
@@ -167,20 +153,19 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         onResetCrop={cropProps.onResetCrop}
       />
 
-      {/* Bold Separator */}
       <div className="h-[2px] bg-[#323246] w-full rounded-full my-0.5" />
 
       {/* Section 2: Rotate (0° - 360°) & Flip */}
       <RotateFlipSection
-        rotationAngle={rotationAngle}
+        rotationAngle={currentRotation}
+        flipH={currentFlipH}
+        flipV={currentFlipV}
         onRotateChange={handleRotateChange}
-        onApplyRotation={handleApplyRotation}
-        onResetRotation={() => onRotateChange(0)}
+        onResetRotation={handleResetRotationAndFlip}
         onFlip={handleFlip}
         isProcessing={transform.isProcessing}
       />
 
-      {/* Bold Separator */}
       <div className="h-[2px] bg-[#323246] w-full rounded-full my-0.5" />
 
       {/* Section 3: Scale(px) */}
@@ -191,41 +176,34 @@ export const OrientationPanel: React.FC<OrientationPanelProps> = ({
         currentHeight={doc.currentHeight}
         onWidthChange={(w) => {
           if (cropProps.isCropActive) cropProps.onCancelCrop()
-          if (rotationAngle !== 0) onRotateChange(0)
           transform.handleWidthChange(w)
         }}
         onHeightChange={(h) => {
           if (cropProps.isCropActive) cropProps.onCancelCrop()
-          if (rotationAngle !== 0) onRotateChange(0)
           transform.handleHeightChange(h)
         }}
-        onResetScale={transform.resetResize}
+        onResetScale={handleResetScaleToOriginal}
         onCommitScale={handleApplyScale}
         isProcessing={transform.isProcessing}
       />
 
-      {/* Bold Separator */}
       <div className="h-[2px] bg-[#323246] w-full rounded-full my-0.5" />
 
       {/* Section 4: Stretch */}
       <StretchSection
-        scaleX={transform.stretchX}
-        scaleY={transform.stretchY}
+        scaleX={currentScaleX}
+        scaleY={currentScaleY}
         currentWidth={doc.currentWidth}
         currentHeight={doc.currentHeight}
         onScaleXChange={(sx) => {
           if (cropProps.isCropActive) cropProps.onCancelCrop()
-          if (rotationAngle !== 0) onRotateChange(0)
-          transform.setStretchX(sx)
+          updateOrientation(doc.id, { scaleX: sx / 100 })
         }}
         onScaleYChange={(sy) => {
           if (cropProps.isCropActive) cropProps.onCancelCrop()
-          if (rotationAngle !== 0) onRotateChange(0)
-          transform.setStretchY(sy)
+          updateOrientation(doc.id, { scaleY: sy / 100 })
         }}
-        onApplyStretch={handleApplyStretch}
-        onResetStretch={transform.resetStretch}
-        isProcessing={transform.isProcessing}
+        onResetStretch={() => updateOrientation(doc.id, { scaleX: 1.0, scaleY: 1.0 })}
       />
     </div>
   )

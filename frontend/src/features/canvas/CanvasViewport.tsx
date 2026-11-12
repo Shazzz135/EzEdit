@@ -43,13 +43,14 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   const docId = activeDoc?.id
   const docW = activeDoc?.currentWidth
   const docH = activeDoc?.currentHeight
+  const resetVer = activeDoc?.resetVersion ?? 0
 
   useEffect(() => {
     if (docId && docW && docH && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect()
       fitToScreen(rect.width, rect.height, docW, docH)
     }
-  }, [docId, docW, docH, fitToScreen])
+  }, [docId, docW, docH, resetVer, fitToScreen])
 
   useEffect(() => {
     const container = containerRef.current
@@ -125,6 +126,13 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     return <EmptyCanvasDropzone onDropImage={onDropImage} onDragOver={handleDragOver} onDrop={handleDrop} />
   }
 
+  const orient = activeDoc.orientation
+  const effRot = orient?.rotation ?? rotationAngle ?? 0
+  const effScaleX = (previewScale?.x ?? 1) * (orient?.scaleX ?? 1) * (orient?.flipH ? -1 : 1)
+  const effScaleY = (previewScale?.y ?? 1) * (orient?.scaleY ?? 1) * (orient?.flipV ? -1 : 1)
+  const hasScaleOrFlip = effScaleX !== 1 || effScaleY !== 1
+  const canvasTransform = `${hasScaleOrFlip ? `scale(${effScaleX}, ${effScaleY}) ` : ''}${effRot ? `rotate(${effRot}deg)` : ''}`.trim() || undefined
+
   return (
     <div
       ref={containerRef}
@@ -161,6 +169,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         className="relative transition-transform duration-75 ease-out shadow-2xl flex-shrink-0"
       >
         <WebGLCanvas
+          key={`${activeDoc.id}_${activeDoc.resetVersion ?? 0}`}
           imageSrc={activeDoc.imageSrc}
           width={activeDoc.currentWidth}
           height={activeDoc.currentHeight}
@@ -170,7 +179,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           isHoldComparing={isHoldComparing}
           style={{
             imageRendering: panZoom.scale > 1.0 ? 'pixelated' : 'auto',
-            transform: `${previewScale ? `scale(${previewScale.x}, ${previewScale.y}) ` : ''}${rotationAngle ? `rotate(${rotationAngle}deg)` : ''}`.trim() || undefined,
+            transform: canvasTransform,
           }}
           className="w-full h-full object-contain pointer-events-none transition-transform duration-75"
         />

@@ -6,6 +6,8 @@ import { FiltersPanel } from '@/features/filters'
 import { SelectionPanel, type SelectionPanelProps } from '@/features/selection'
 import { CutoutPanel, type CutoutPanelProps } from '@/features/cutout'
 import { RetouchPanel, type RetouchPanelProps } from '@/features/retouch'
+import { AIPanel, AIPreviewModal, usePollinationsState } from '@/features/ai'
+import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { type CropPanelProps } from '@/features/crop/CropPanel'
 import { type DocumentState, type AdjustmentValues, type FilterState } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
@@ -53,37 +55,53 @@ export interface ToolsPanelProps {
   selectionSubTab?: 'vector' | 'cutout'
   onSelectSelectionSubTab?: (subTab: 'vector' | 'cutout') => void
   retouchProps?: RetouchPanelProps
+  onTabLimitExceeded?: () => void
 }
 
 export const ToolsPanel: React.FC<ToolsPanelProps> = ({
-  activeCategory,
-  onSelectCategory,
-  activeDoc,
-  onUpdateAdjustments,
-  onResetAdjustments,
-  onUpdateFilter,
-  onResetFilter,
-  cropProps,
-  onApplyTransform,
-  onPreviewScaleChange,
-  rotationAngle,
-  onRotateChange,
-  splitActive = false,
-  onToggleSplit = () => {},
-  splitPosition = 0.5,
-  onChangeSplitPosition = () => {},
-  isHoldComparing = false,
-  onHoldCompareStart = () => {},
-  onHoldCompareEnd = () => {},
-  selectionProps,
-  cutoutProps,
-  selectionSubTab = 'vector',
-  onSelectSelectionSubTab,
-  retouchProps,
+  activeCategory, onSelectCategory, activeDoc,
+  onUpdateAdjustments, onResetAdjustments, onUpdateFilter, onResetFilter,
+  cropProps, onApplyTransform, onPreviewScaleChange, rotationAngle, onRotateChange,
+  splitActive = false, onToggleSplit = () => {}, splitPosition = 0.5, onChangeSplitPosition = () => {},
+  isHoldComparing = false, onHoldCompareStart = () => {}, onHoldCompareEnd = () => {},
+  selectionProps, cutoutProps, selectionSubTab = 'vector', onSelectSelectionSubTab,
+  retouchProps, onTabLimitExceeded,
 }) => {
+  const ai = usePollinationsState()
+  const addDocument = useDocumentStore((s) => s.addDocument)
+
+  const handleOpenInNewTab = () => {
+    if (!ai.previewResult) return
+    const res = addDocument({
+      name: `AI-${ai.previewResult.seed}.png`,
+      originalWidth: ai.previewResult.width,
+      originalHeight: ai.previewResult.height,
+      currentWidth: ai.previewResult.width,
+      currentHeight: ai.previewResult.height,
+      imageSrc: ai.previewResult.url,
+      imageBlob: ai.previewResult.blob,
+    })
+    if (!res.success && res.error === 'MAX_TABS_EXCEEDED') {
+      onTabLimitExceeded?.()
+      return
+    }
+    ai.consumePreview()
+  }
+
+  const handleReplaceActiveImage = () => {
+    if (!ai.previewResult || !activeDoc || !onApplyTransform) return
+    const current = ai.consumePreview()
+    if (!current) return
+    onApplyTransform({
+      url: current.url,
+      blob: current.blob,
+      width: current.width,
+      height: current.height,
+    })
+  }
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
-      {/* Category Dropdown Selector at Top */}
       <div className="p-2.5 border-b border-[#242430] bg-[#14141A] flex-shrink-0">
         <Dropdown
           label="Tool Category"
@@ -93,10 +111,10 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
         />
       </div>
 
-      {/* Category Content Pane */}
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
         {activeDoc && activeCategory === 'orientation' && cropProps && onApplyTransform && (
           <OrientationPanel
+            key={`${activeDoc.id}_${activeDoc.resetVersion ?? 0}`}
             document={activeDoc}
             cropProps={cropProps}
             rotationAngle={rotationAngle ?? 0}
@@ -108,6 +126,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
 
         {activeDoc && activeCategory === 'adjustments' && (
           <AdjustmentsPanel
+            key={`${activeDoc.id}_${activeDoc.resetVersion ?? 0}`}
             adjustments={activeDoc.adjustments}
             onChange={(partial) => onUpdateAdjustments(activeDoc.id, partial)}
             onResetAll={() => onResetAdjustments?.(activeDoc.id)}
@@ -116,6 +135,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
 
         {activeDoc && activeCategory === 'filters' && (
           <FiltersPanel
+            key={`${activeDoc.id}_${activeDoc.resetVersion ?? 0}`}
             filter={activeDoc.filter}
             onChangeFilter={(partial) => onUpdateFilter?.(activeDoc.id, partial)}
             onResetFilter={() => onResetFilter?.(activeDoc.id)}
@@ -130,7 +150,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
         )}
 
         {activeDoc && activeCategory === 'selection' && (
-          <div className="flex flex-col gap-3">
+          <div key={`${activeDoc.id}_${activeDoc.resetVersion ?? 0}`} className="flex flex-col gap-3">
             <div className="flex rounded-lg bg-[#14141E] p-0.5 border border-[#242432]">
               <button
                 type="button"
@@ -151,35 +171,64 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
                 Background Removal
               </button>
             </div>
-
-            {selectionSubTab === 'vector' && selectionProps && (
-              <SelectionPanel {...selectionProps} />
-            )}
-
-            {selectionSubTab === 'cutout' && cutoutProps && (
-              <CutoutPanel {...cutoutProps} />
-            )}
+            {selectionSubTab === 'vector' && selectionProps && <SelectionPanel {...selectionProps} />}
+            {selectionSubTab === 'cutout' && cutoutProps && <CutoutPanel {...cutoutProps} />}
           </div>
         )}
 
         {activeDoc && activeCategory === 'retouch' && retouchProps && (
-          <RetouchPanel {...retouchProps} />
+          <RetouchPanel key={activeDoc.id} {...retouchProps} />
         )}
 
-        {activeDoc && activeCategory !== 'orientation' && activeCategory !== 'adjustments' && activeCategory !== 'filters' && activeCategory !== 'selection' && activeCategory !== 'retouch' && (
-          <div className="flex flex-col items-center justify-center p-6 text-center text-[#707080] text-xs">
-            <span>
-              {TOOL_CATEGORIES.find((c) => c.id === activeCategory)?.label} tools will activate in Milestone 8
-            </span>
-          </div>
+        {activeCategory === 'ai' && (
+          <AIPanel
+            mode={ai.mode}
+            hasActiveDocument={!!activeDoc}
+            activeWidth={activeDoc?.currentWidth}
+            activeHeight={activeDoc?.currentHeight}
+            prompt={ai.prompt}
+            aspectRatio={ai.aspectRatio}
+            style={ai.style}
+            seed={ai.seed}
+            enhance={ai.enhance}
+            isGenerating={ai.isGenerating}
+            error={ai.error}
+            onChangeMode={ai.setMode}
+            onChangePrompt={ai.setPrompt}
+            onChangeAspectRatio={ai.setAspectRatio}
+            onChangeStyle={ai.setStyle}
+            onChangeSeed={ai.setSeed}
+            onRandomizeSeed={ai.randomizeSeed}
+            onToggleEnhance={() => ai.setEnhance((v) => !v)}
+            onGenerate={() =>
+              ai.handleGenerate(
+                undefined,
+                activeDoc ? { imageSrc: activeDoc.imageSrc, width: activeDoc.currentWidth, height: activeDoc.currentHeight } : undefined
+              )
+            }
+          />
         )}
 
-        {!activeDoc && (
+        {!activeDoc && activeCategory !== 'ai' && (
           <div className="flex flex-col items-center justify-center p-6 text-[#707080] text-xs text-center">
-            <span>Open or import an image to use editing tools</span>
+            <span>Open or import an image to use editing tools, or switch to AI Tools to generate one</span>
           </div>
         )}
       </div>
+
+      <AIPreviewModal
+        result={ai.previewResult}
+        hasActiveDocument={!!activeDoc}
+        isRegenerating={ai.isGenerating}
+        onOpenInNewTab={handleOpenInNewTab}
+        onReplaceActiveImage={handleReplaceActiveImage}
+        onRegenerate={() =>
+          ai.handleRegenerateWithNewSeed(
+            activeDoc ? { imageSrc: activeDoc.imageSrc, width: activeDoc.currentWidth, height: activeDoc.currentHeight } : undefined
+          )
+        }
+        onClose={ai.closePreview}
+      />
     </div>
   )
 }

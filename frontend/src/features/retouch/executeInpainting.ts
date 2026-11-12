@@ -1,5 +1,6 @@
 import { type Point, type MaskStroke } from './types'
 import { executePollinationsInpainting } from './pollinationsInpaint'
+import { computeEditDimensions } from '@/features/ai/pollinationsEditUtils'
 
 export interface ExecuteInpaintingOptions {
   prompt?: string
@@ -25,10 +26,10 @@ export async function executeInpainting(
   if (!ctx) throw new Error('Could not get 2d context')
 
   const baseImg = await loadImage(imageSrc)
-  ctx.drawImage(baseImg, 0, 0)
+  ctx.drawImage(baseImg, 0, 0, width, height)
   const imgData = ctx.getImageData(0, 0, width, height)
 
-  // 2. Prepare Mask Buffer (supports brush strokes, vector polygons, or raw maskData)
+  // 2. Prepare Mask Buffer (black background R=0, white mask strokes R=255 with soft feathering)
   let maskBuffer: Uint8ClampedArray
   const hasStrokes = !!(options.maskStrokes && options.maskStrokes.length > 0)
   const hasPaths = !!(options.maskPaths && options.maskPaths.length > 0)
@@ -45,6 +46,7 @@ export async function executeInpainting(
     mCtx.fillStyle = '#000000'
     mCtx.fillRect(0, 0, width, height)
 
+    mCtx.filter = 'blur(3px)'
     mCtx.fillStyle = '#FFFFFF'
     mCtx.strokeStyle = '#FFFFFF'
     mCtx.lineCap = 'round'
@@ -92,9 +94,12 @@ export async function executeInpainting(
     throw new Error('No inpainting mask provided')
   }
 
-  // 3. Execute Pollinations.ai Generative Inpainting
+  // 3. Build Reference Data URI with masked region neutralized so AI reconstructs it from context
+  const refDataUri = buildMaskedReferenceDataUri(imgData, maskBuffer, width, height)
+
+  // 4. Execute Pollinations.ai Image-to-Image Inpainting
   options.onProgress?.(0.3)
-  const aiBlob = await executePollinationsInpainting(imageSrc, {
+  const aiBlob = await executePollinationsInpainting(refDataUri, {
     prompt: options.prompt,
     width,
     height,
@@ -104,6 +109,7 @@ export async function executeInpainting(
     throw new Error('Pollinations.ai inpainting service unavailable')
   }
 
+  // 5. Composite ONLY the masked pixels (Red channel maskBuffer[i * 4]) onto the original image
   options.onProgress?.(0.8)
   const aiUrl = URL.createObjectURL(aiBlob)
   try {
@@ -113,17 +119,21 @@ export async function executeInpainting(
     aiCanvas.height = height
     const aiCtx = aiCanvas.getContext('2d')
     if (aiCtx) {
+      aiCtx.imageSmoothingEnabled = true
+      aiCtx.imageSmoothingQuality = 'high'
       aiCtx.drawImage(aiImg, 0, 0, width, height)
       const aiData = aiCtx.getImageData(0, 0, width, height).data
       const outData = imgData.data
 
       for (let i = 0; i < width * height; i++) {
-        const mVal = maskBuffer[i * 4] || maskBuffer[i * 4 + 3]
-        if (mVal > 32) {
+        const mVal = maskBuffer[i * 4]
+        if (mVal > 8) {
+          const alpha = mVal / 255
+          const inv = 1 - alpha
           const idx = i * 4
-          outData[idx] = aiData[idx]
-          outData[idx + 1] = aiData[idx + 1]
-          outData[idx + 2] = aiData[idx + 2]
+          outData[idx] = Math.round(outData[idx] * inv + aiData[idx] * alpha)
+          outData[idx + 1] = Math.round(outData[idx + 1] * inv + aiData[idx + 1] * alpha)
+          outData[idx + 2] = Math.round(outData[idx + 2] * inv + aiData[idx + 2] * alpha)
           outData[idx + 3] = 255
         }
       }
@@ -135,6 +145,57 @@ export async function executeInpainting(
 
   options.onProgress?.(1.0)
   return canvasToResult(canvas, width, height)
+}
+
+function buildMaskedReferenceDataUri(
+  imgData: ImageData,
+  maskBuffer: Uint8ClampedArray,
+  width: number,
+  height: number
+): string {
+  const workCanvas = document.createElement('canvas')
+  workCanvas.width = width
+  workCanvas.height = height
+  const wCtx = workCanvas.getContext('2d')
+  if (!wCtx) return ''
+
+  const copy = new ImageData(new Uint8ClampedArray(imgData.data), width, height)
+  let rSum = 0, gSum = 0, bSum = 0, count = 0
+  for (let i = 0; i < width * height; i++) {
+    const m = maskBuffer[i * 4]
+    if (m > 0 && m < 180) {
+      rSum += copy.data[i * 4]
+      gSum += copy.data[i * 4 + 1]
+      bSum += copy.data[i * 4 + 2]
+      count++
+    }
+  }
+  const avgR = count > 0 ? Math.round(rSum / count) : 128
+  const avgG = count > 0 ? Math.round(gSum / count) : 128
+  const avgB = count > 0 ? Math.round(bSum / count) : 128
+
+  for (let i = 0; i < width * height; i++) {
+    const m = maskBuffer[i * 4]
+    if (m > 32) {
+      const t = (m / 255) * 0.85
+      const idx = i * 4
+      copy.data[idx] = Math.round(copy.data[idx] * (1 - t) + avgR * t)
+      copy.data[idx + 1] = Math.round(copy.data[idx + 1] * (1 - t) + avgG * t)
+      copy.data[idx + 2] = Math.round(copy.data[idx + 2] * (1 - t) + avgB * t)
+    }
+  }
+  wCtx.putImageData(copy, 0, 0)
+
+  const { editW, editH } = computeEditDimensions(width, height, 1024)
+  const scaledCanvas = document.createElement('canvas')
+  scaledCanvas.width = editW
+  scaledCanvas.height = editH
+  const sCtx = scaledCanvas.getContext('2d')
+  if (!sCtx) return workCanvas.toDataURL('image/jpeg', 0.9)
+  sCtx.imageSmoothingEnabled = true
+  sCtx.imageSmoothingQuality = 'high'
+  sCtx.drawImage(workCanvas, 0, 0, editW, editH)
+  return scaledCanvas.toDataURL('image/jpeg', 0.9)
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {

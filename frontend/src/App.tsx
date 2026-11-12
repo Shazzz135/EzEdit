@@ -22,9 +22,9 @@ import { type TransformResult } from '@/types/transform'
 export const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = usePersistedToolCategory()
   const [tabLimitModalOpen, setTabLimitModalOpen] = useState(false)
+  const [transferModalOpen, setTransferModalOpen] = useState(false)
   const [unsavedDoc, setUnsavedDoc] = useState<{ id: string; name: string } | null>(null)
   const [previewScale, setPreviewScale] = useState<{ x: number; y: number } | undefined>(undefined)
-  const [rotationAngle, setRotationAngle] = useState(0)
   const [splitActive, setSplitActive] = useState(false)
   const [splitPosition, setSplitPosition] = useState(0.5)
   const [isHoldComparing, setIsHoldComparing] = useState(false)
@@ -34,8 +34,8 @@ export const App: React.FC = () => {
   const { quotaWarning, dismissQuotaWarning } = useDocumentPersistence()
   const {
     documents, activeDocumentId, setActiveDocument, getActiveDocument,
-    updateAdjustments, resetAdjustments, updateFilter, resetFilter,
-    closeDocument, applyRasterTransform, undo, redo,
+    updateAdjustments, resetAdjustments, updateOrientation, updateFilter, resetFilter,
+    closeDocument, applyRasterTransform, resetDocumentCompletely, transferEdits, undo, redo,
   } = useDocumentStore()
   const activeDoc = getActiveDocument()
   const panZoom = useCanvasPanZoom()
@@ -54,14 +54,14 @@ export const App: React.FC = () => {
 
   const resetToolStates = useCallback(() => {
     crop.cancelCrop(); selection.clearSelection(); retouch.resetRetouch();
-    setRotationAngle(0); setPreviewScale(undefined); setSplitActive(false); setIsHoldComparing(false);
+    setPreviewScale(undefined); setSplitActive(false); setIsHoldComparing(false);
   }, [crop, selection, retouch])
 
   const [prevTracked, setPrevTracked] = useState({ docId: activeDocumentId, cat: activeCategory })
   if (prevTracked.docId !== activeDocumentId || prevTracked.cat !== activeCategory) {
     setPrevTracked({ docId: activeDocumentId, cat: activeCategory })
     crop.cancelCrop(); selection.clearSelection(); retouch.resetRetouch();
-    setRotationAngle(0); setPreviewScale(undefined); setSplitActive(false); setIsHoldComparing(false);
+    setPreviewScale(undefined); setSplitActive(false); setIsHoldComparing(false);
   }
 
   const handleSelectSelectionSubTab = useCallback((subTab: 'vector' | 'cutout') => {
@@ -108,25 +108,21 @@ export const App: React.FC = () => {
   return (
     <>
       <input
-        ref={mobileFileInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        className="hidden"
-        onChange={(e) => {
-          if (e.target.files?.[0]) handleDropFile(e.target.files[0])
-          e.target.value = ''
-        }}
+        ref={mobileFileInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
+        onChange={(e) => { if (e.target.files?.[0]) handleDropFile(e.target.files[0]); e.target.value = '' }}
       />
       <WorkspaceShell
         headerProps={{
           onUndo: canUndo ? () => undo(activeDoc!.id) : undefined,
           onRedo: canRedo ? () => redo(activeDoc!.id) : undefined,
+          onMassReset: activeDoc ? () => { resetToolStates(); resetDocumentCompletely(activeDoc.id); } : undefined,
+          onOpenTransferEdits: activeDoc && documents.length > 1 ? () => setTransferModalOpen(true) : undefined,
           onZoomIn: panZoom.zoomIn,
           onZoomOut: panZoom.zoomOut,
           isGrabActive: panZoom.isHandToolActive || panZoom.isSpacePressed,
           onToggleGrab: panZoom.toggleHandTool,
           onOpenAI: () => { setActiveCategory('ai'); resetToolStates(); },
-          canUndo, canRedo, mobileSelector,
+          canUndo, canRedo, canMassReset: !!activeDoc, canTransferEdits: !!activeDoc && documents.length > 1, mobileSelector,
         }}
         canvasContent={
           <CanvasViewport
@@ -134,7 +130,6 @@ export const App: React.FC = () => {
             panZoom={panZoom}
             onDropImage={handleDropFile}
             previewScale={previewScale}
-            rotationAngle={rotationAngle}
             splitActive={activeCategory === 'filters' && splitActive}
             splitPosition={splitPosition}
             onChangeSplitPosition={setSplitPosition}
@@ -143,7 +138,10 @@ export const App: React.FC = () => {
             onToggleSplit={() => setSplitActive((v) => !v)}
             onRightClickDeselect={resetToolStates}
             rotateOverlay={activeDoc && activeCategory === 'orientation' && !crop.isCropActive ? (
-              <RotateHandle rotationAngle={rotationAngle} onRotateChange={setRotationAngle} />
+              <RotateHandle
+                rotationAngle={activeDoc.orientation?.rotation ?? 0}
+                onRotateChange={(a) => updateOrientation(activeDoc.id, { rotation: a })}
+              />
             ) : undefined}
             selectionOverlay={activeDoc && activeCategory === 'selection' && selectionSubTab === 'vector' ? (scale) => (
               <SelectionOverlay
@@ -188,7 +186,6 @@ export const App: React.FC = () => {
             isHoldComparing={isHoldComparing}
             onHoldCompareStart={() => setIsHoldComparing(true)} onHoldCompareEnd={() => setIsHoldComparing(false)}
             onApplyTransform={handleApplyTransform} onPreviewScaleChange={setPreviewScale}
-            rotationAngle={rotationAngle} onRotateChange={setRotationAngle}
             retouchProps={{
               tool: retouch.tool, settings: retouch.settings, sourcePoint: retouch.sourcePoint,
               hasMask: retouch.paintedMaskPaths.length > 0 || selection.state.hasSelection,
@@ -216,6 +213,7 @@ export const App: React.FC = () => {
               onApplyCrop: handleApplyCrop, onCancelCrop: crop.cancelCrop,
               onResetCrop: () => activeDoc && crop.startCrop(activeDoc.currentWidth, activeDoc.currentHeight),
             }}
+            onTabLimitExceeded={() => setTabLimitModalOpen(true)}
           />
         }
         tabBarContent={
@@ -234,6 +232,12 @@ export const App: React.FC = () => {
         onKeepUnsavedDoc={() => setUnsavedDoc(null)}
         onDiscardUnsavedDoc={() => { if (unsavedDoc) closeDocument(unsavedDoc.id); setUnsavedDoc(null) }}
         quotaWarning={quotaWarning} onDismissQuotaWarning={dismissQuotaWarning}
+        transferModalOpen={transferModalOpen} onCloseTransferModal={() => setTransferModalOpen(false)}
+        activeDoc={activeDoc} documents={documents}
+        onTransferEdits={(srcId, targetIds, cats) => {
+          transferEdits(srcId, targetIds, cats)
+          if (targetIds.length > 0 && (!activeDocumentId || !targetIds.includes(activeDocumentId))) setActiveDocument(targetIds[0])
+        }}
       />
     </>
   )

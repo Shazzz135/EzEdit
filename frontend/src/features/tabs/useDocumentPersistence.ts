@@ -3,6 +3,7 @@ import { useDocumentStore } from './useDocumentStore'
 import {
   loadAllDocuments,
   saveDocumentBlob,
+  saveOriginalDocumentBlob,
   saveDocumentMeta,
   saveSession,
   deleteDocument,
@@ -21,6 +22,7 @@ export function useDocumentPersistence(): UseDocumentPersistenceReturn {
   const [isHydrated, setIsHydrated] = useState(false)
   const [quotaWarning, setQuotaWarning] = useState<StorageQuotaEstimate | null>(null)
   const prevDocIdsRef = useRef<Set<string>>(new Set())
+  const prevImageSrcsRef = useRef<Map<string, string>>(new Map())
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { documents, activeDocumentId, setHydratedDocuments } = useDocumentStore()
@@ -41,6 +43,7 @@ export function useDocumentPersistence(): UseDocumentPersistenceReturn {
           if (loaded.documents.length > 0) {
             setHydratedDocuments(loaded.documents, loaded.activeDocumentId)
             prevDocIdsRef.current = new Set(loaded.documents.map((d) => d.id))
+            prevImageSrcsRef.current = new Map(loaded.documents.map((d) => [d.id, d.imageSrc]))
           }
           setIsHydrated(true)
         }
@@ -83,16 +86,25 @@ export function useDocumentPersistence(): UseDocumentPersistenceReturn {
       for (const oldId of prevDocIdsRef.current) {
         if (!currentIds.has(oldId)) {
           await deleteDocument(oldId)
+          prevImageSrcsRef.current.delete(oldId)
         }
       }
 
       // Save each document
       for (const doc of documents) {
-        // If it's a new document not in prevDocIds, save the blob
-        if (!prevDocIdsRef.current.has(doc.id)) {
+        const isNewDoc = !prevDocIdsRef.current.has(doc.id)
+        if (isNewDoc) {
+          const origBlob = doc.originalImageBlob || doc.history?.[0]?.imageBlob || (await ensureBlob(doc))
+          if (origBlob) {
+            await saveOriginalDocumentBlob(doc.id, origBlob)
+          }
+        }
+
+        if (isNewDoc || prevImageSrcsRef.current.get(doc.id) !== doc.imageSrc) {
           const blob = await ensureBlob(doc)
           if (blob) {
             await saveDocumentBlob(doc.id, blob)
+            prevImageSrcsRef.current.set(doc.id, doc.imageSrc)
           }
         }
 
@@ -122,7 +134,7 @@ export function useDocumentPersistence(): UseDocumentPersistenceReturn {
       })
 
       prevDocIdsRef.current = currentIds
-    }, 400) // 400ms debounce
+    }, 400)
 
     return () => {
       if (saveTimeoutRef.current) {

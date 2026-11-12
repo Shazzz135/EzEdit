@@ -2,8 +2,10 @@ import React from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { AlertTriangle } from 'lucide-react'
-import { MAX_TAB_LIMIT, MAX_IMPORT_DIMENSION } from '@/types/document'
+import { MAX_TAB_LIMIT, MAX_IMPORT_DIMENSION, type DocumentState } from '@/types/document'
 import { type StorageQuotaEstimate } from '@/services/storage'
+import { TransferEditsModal } from './TransferEditsModal'
+import { type TransferEditCategories } from '@/features/tabs/useDocumentStore'
 
 export interface WorkspaceModalsProps {
   tabLimitModalOpen: boolean
@@ -16,6 +18,15 @@ export interface WorkspaceModalsProps {
   onDiscardUnsavedDoc: () => void
   quotaWarning: StorageQuotaEstimate | null
   onDismissQuotaWarning: () => void
+  transferModalOpen?: boolean
+  onCloseTransferModal?: () => void
+  activeDoc?: DocumentState
+  documents?: DocumentState[]
+  onTransferEdits?: (
+    sourceId: string,
+    targetIds: string[],
+    categories: TransferEditCategories
+  ) => void
 }
 
 export const WorkspaceModals: React.FC<WorkspaceModalsProps> = ({
@@ -29,9 +40,21 @@ export const WorkspaceModals: React.FC<WorkspaceModalsProps> = ({
   onDiscardUnsavedDoc,
   quotaWarning,
   onDismissQuotaWarning,
+  transferModalOpen = false,
+  onCloseTransferModal = () => {},
+  activeDoc,
+  documents = [],
+  onTransferEdits = () => {},
 }) => {
   return (
     <>
+      <TransferEditsModal
+        isOpen={transferModalOpen}
+        sourceDoc={activeDoc}
+        documents={documents}
+        onClose={onCloseTransferModal}
+        onTransfer={onTransferEdits}
+      />
       <Modal isOpen={tabLimitModalOpen} onClose={onCloseTabLimitModal} title="Maximum Tabs Reached">
         <div className="flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
