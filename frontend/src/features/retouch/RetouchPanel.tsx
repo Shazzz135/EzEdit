@@ -97,12 +97,12 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
           )}
           {tool !== 'spot-heal' && !sourcePoint && (
             <span>
-              Hold <strong className="text-[#60A5FA]">Alt</strong> and click on the canvas to set the sample anchor point.
+              <strong className="text-[#60A5FA]">Right-Click</strong> (or hold Alt+Click) on the canvas to set the sample anchor point.
             </span>
           )}
           {tool !== 'spot-heal' && sourcePoint && (
             <span>
-              Sample anchor set at ({sourcePoint.x}, {sourcePoint.y}). Drag on canvas to retouch.
+              Sample anchor set at ({sourcePoint.x}, {sourcePoint.y}). Drag to retouch, or right-click to move anchor.
             </span>
           )}
         </div>

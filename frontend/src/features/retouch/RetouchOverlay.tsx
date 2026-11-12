@@ -13,12 +13,11 @@ export interface RetouchOverlayProps {
   isAltPressed: boolean
   onSetSourcePoint: (pt: Point) => void
   onCommitTransform: (result: { url: string; blob: Blob; width: number; height: number }) => void
-  onDeselectSource?: () => void
 }
 
 export const RetouchOverlay: React.FC<RetouchOverlayProps> = ({
   imageSrc, imageWidth, imageHeight, zoomScale, tool, settings,
-  sourcePoint, isAltPressed, onSetSourcePoint, onCommitTransform, onDeselectSource,
+  sourcePoint, isAltPressed, onSetSourcePoint, onCommitTransform,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [cursorPos, setCursorPos] = useState<Point | null>(null)
@@ -55,13 +54,19 @@ export const RetouchOverlay: React.FC<RetouchOverlayProps> = ({
   }, [imageWidth, imageHeight])
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const pt = getImageCoords(e)
+
+    // Right-click: set sample anchor point for Clone Stamp & Healing Brush
     if (e.button === 2) {
       e.preventDefault()
-      onDeselectSource?.()
+      e.stopPropagation()
+      if (tool !== 'spot-heal') {
+        onSetSourcePoint(pt)
+      }
       return
     }
+
     if (e.button !== 0) return
-    const pt = getImageCoords(e)
 
     if (isAltPressed || e.altKey) {
       if (tool !== 'spot-heal') onSetSourcePoint(pt)
@@ -178,7 +183,17 @@ export const RetouchOverlay: React.FC<RetouchOverlayProps> = ({
       onPointerUp={handlePointerUp}
       onPointerEnter={() => setIsPointerOver(true)}
       onPointerLeave={() => { setIsPointerOver(false); setCursorPos(null); }}
-      onContextMenu={(e) => { e.preventDefault(); onDeselectSource?.(); }}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (tool !== 'spot-heal' && canvasRef.current) {
+          const rect = canvasRef.current.getBoundingClientRect()
+          const effectiveScale = rect.width / imageWidth
+          const x = Math.max(0, Math.min(imageWidth, (e.clientX - rect.left) / effectiveScale))
+          const y = Math.max(0, Math.min(imageHeight, (e.clientY - rect.top) / effectiveScale))
+          onSetSourcePoint({ x: Math.round(x), y: Math.round(y) })
+        }
+      }}
       style={{ width: `${imageWidth}px`, height: `${imageHeight}px` }}
       className={`absolute inset-0 z-20 touch-none select-none ${isAltPressed ? 'cursor-crosshair' : 'cursor-none'}`}
     />
