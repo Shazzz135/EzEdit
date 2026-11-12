@@ -92,6 +92,10 @@ export class WebGLAdjustmentPipeline {
     gl.bindVertexArray(null)
   }
 
+  public hasTexture(): boolean {
+    return this.texture !== null
+  }
+
   public setTexture(image: HTMLImageElement | ImageBitmap) {
     const gl = this.gl
     if (!this.texture) this.texture = gl.createTexture()

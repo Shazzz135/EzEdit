@@ -5,12 +5,12 @@ import {
   FlipHorizontal,
   FlipVertical,
 } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
 
 export interface RotateFlipSectionProps {
   rotationAngle: number
+  flipH?: boolean
+  flipV?: boolean
   onRotateChange: (angle: number) => void
-  onApplyRotation: () => void
   onResetRotation: () => void
   onFlip: (direction: 'horizontal' | 'vertical') => void
   isProcessing?: boolean
@@ -18,14 +18,13 @@ export interface RotateFlipSectionProps {
 
 export const RotateFlipSection: React.FC<RotateFlipSectionProps> = ({
   rotationAngle,
+  flipH = false,
+  flipV = false,
   onRotateChange,
-  onApplyRotation,
   onResetRotation,
   onFlip,
   isProcessing,
 }) => {
-  const isAngleChanged = rotationAngle !== 0
-
   return (
     <div className="flex flex-col gap-3">
       {/* Strong Header */}
@@ -33,13 +32,13 @@ export const RotateFlipSection: React.FC<RotateFlipSectionProps> = ({
         <div className="flex items-center gap-2">
           <RotateCw className="w-4 h-4 text-[#60A5FA]" />
           <span className="text-xs font-bold text-[#E0E0EC] uppercase tracking-wider">
-            Rotate & Flip
+            Rotate &amp; Flip
           </span>
         </div>
         <button
           type="button"
           onClick={onResetRotation}
-          title="Reset Rotation to 0°"
+          title="Reset Rotation & Flip"
           className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
@@ -69,7 +68,7 @@ export const RotateFlipSection: React.FC<RotateFlipSectionProps> = ({
             type="number"
             min={0}
             max={360}
-            value={rotationAngle}
+            value={Math.round(rotationAngle)}
             onChange={(e) =>
               onRotateChange(
                 Math.min(360, Math.max(0, Number(e.target.value) || 0))
@@ -78,15 +77,6 @@ export const RotateFlipSection: React.FC<RotateFlipSectionProps> = ({
             className="w-16 bg-[#12121C] border border-[#2A2A3C] text-right font-mono text-xs px-1.5 py-1 rounded text-[#E0E0EC] outline-none"
           />
         </div>
-
-        <Button
-          variant="ghost"
-          onClick={onApplyRotation}
-          disabled={!isAngleChanged || isProcessing}
-          className="w-full mt-1 py-1.5 text-xs font-semibold bg-[#1E1E2C] hover:bg-[#262638] text-[#60A5FA] border border-[#3B82F6]/60 disabled:opacity-40 disabled:border-[#2A2A3A] disabled:text-[#707080]"
-        >
-          {isProcessing ? 'Rotating...' : 'Apply Rotation'}
-        </Button>
       </div>
 
       {/* Separator Line */}
@@ -103,20 +93,28 @@ export const RotateFlipSection: React.FC<RotateFlipSectionProps> = ({
             onClick={() => onFlip('horizontal')}
             disabled={isProcessing}
             title="Flip Horizontal (Mirror)"
-            className="flex items-center justify-center p-2 rounded-lg bg-[#14141E] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
+            className={`flex items-center justify-center p-2 rounded-lg border text-[11px] gap-1.5 transition-all cursor-pointer ${
+              flipH
+                ? 'bg-[#1E1E2E] border-[#60A5FA] text-[#F4F4F6] font-semibold'
+                : 'bg-[#14141E] hover:bg-[#1C1C28] border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC]'
+            }`}
           >
             <FlipHorizontal className="w-4 h-4 text-[#60A5FA]" />
-            <span>Flip H</span>
+            <span>Flip H {flipH ? '(On)' : ''}</span>
           </button>
           <button
             type="button"
             onClick={() => onFlip('vertical')}
             disabled={isProcessing}
             title="Flip Vertical"
-            className="flex items-center justify-center p-2 rounded-lg bg-[#14141E] hover:bg-[#1C1C28] border border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC] text-[11px] gap-1.5 transition-all cursor-pointer"
+            className={`flex items-center justify-center p-2 rounded-lg border text-[11px] gap-1.5 transition-all cursor-pointer ${
+              flipV
+                ? 'bg-[#1E1E2E] border-[#60A5FA] text-[#F4F4F6] font-semibold'
+                : 'bg-[#14141E] hover:bg-[#1C1C28] border-[#242434] hover:border-[#3A3A4E] text-[#D0D0DC]'
+            }`}
           >
             <FlipVertical className="w-4 h-4 text-[#60A5FA]" />
-            <span>Flip V</span>
+            <span>Flip V {flipV ? '(On)' : ''}</span>
           </button>
         </div>
       </div>

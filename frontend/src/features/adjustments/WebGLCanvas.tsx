@@ -27,8 +27,27 @@ export const WebGLCanvas: React.FC<WebGLCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pipelineRef = useRef<WebGLAdjustmentPipeline | null>(null)
+  const loadedSrcRef = useRef<string | null>(null)
   const [isSupported, setIsSupported] = useState(true)
-  const imageRef = useRef<HTMLImageElement | null>(null)
+  const renderParamsRef = useRef({
+    adjustments,
+    width,
+    height,
+    filter,
+    splitPosition,
+    isHoldComparing,
+  })
+
+  useEffect(() => {
+    renderParamsRef.current = {
+      adjustments,
+      width,
+      height,
+      filter,
+      splitPosition,
+      isHoldComparing,
+    }
+  }, [adjustments, width, height, filter, splitPosition, isHoldComparing])
 
   // Initialize WebGL2 context and pipeline
   useEffect(() => {
@@ -49,6 +68,7 @@ export const WebGLCanvas: React.FC<WebGLCanvasProps> = ({
     try {
       const pipeline = new WebGLAdjustmentPipeline(gl)
       pipelineRef.current = pipeline
+      loadedSrcRef.current = null
     } catch (err) {
       console.warn('WebGL2 adjustment pipeline initialization failed:', err)
       queueMicrotask(() => setIsSupported(false))
@@ -57,30 +77,70 @@ export const WebGLCanvas: React.FC<WebGLCanvasProps> = ({
     return () => {
       pipelineRef.current?.destroy()
       pipelineRef.current = null
+      loadedSrcRef.current = null
     }
   }, [])
 
   // Load image texture when imageSrc changes
   useEffect(() => {
     const pipeline = pipelineRef.current
-    if (!pipeline || !isSupported) return
+    if (!pipeline || !isSupported || !imageSrc) return
 
+    let cancelled = false
     const img = new Image()
-    img.crossOrigin = 'anonymous'
+    if (!imageSrc.startsWith('blob:') && !imageSrc.startsWith('data:')) {
+      img.crossOrigin = 'anonymous'
+    }
     img.onload = () => {
-      imageRef.current = img
-      pipeline.setTexture(img)
-      pipeline.render(adjustments, width, height, filter, splitPosition, isHoldComparing)
+      if (cancelled || !pipelineRef.current) return
+      loadedSrcRef.current = imageSrc
+      pipelineRef.current.setTexture(img)
+      const p = renderParamsRef.current
+      pipelineRef.current.render(
+        p.adjustments,
+        p.width,
+        p.height,
+        p.filter,
+        p.splitPosition,
+        p.isHoldComparing
+      )
     }
     img.src = imageSrc
-  }, [imageSrc, isSupported, width, height, adjustments, filter, splitPosition, isHoldComparing])
 
-  // Real-time 60fps render when adjustments, filter or split compare change
+    return () => {
+      cancelled = true
+    }
+  }, [imageSrc, isSupported])
+
+  // Real-time 60fps render when adjustments, filter, dimensions, or split compare change
   useEffect(() => {
     const pipeline = pipelineRef.current
-    if (!pipeline || !imageRef.current || !isSupported) return
-    pipeline.render(adjustments, width, height, filter, splitPosition, isHoldComparing)
-  }, [adjustments, filter, splitPosition, isHoldComparing, width, height, isSupported])
+    if (!pipeline || !isSupported) return
+
+    if (pipeline.hasTexture() && loadedSrcRef.current === imageSrc) {
+      pipeline.render(adjustments, width, height, filter, splitPosition, isHoldComparing)
+    } else if (imageSrc) {
+      const img = new Image()
+      if (!imageSrc.startsWith('blob:') && !imageSrc.startsWith('data:')) {
+        img.crossOrigin = 'anonymous'
+      }
+      img.onload = () => {
+        if (!pipelineRef.current) return
+        loadedSrcRef.current = imageSrc
+        pipelineRef.current.setTexture(img)
+        const p = renderParamsRef.current
+        pipelineRef.current.render(
+          p.adjustments,
+          p.width,
+          p.height,
+          p.filter,
+          p.splitPosition,
+          p.isHoldComparing
+        )
+      }
+      img.src = imageSrc
+    }
+  }, [adjustments, filter, splitPosition, isHoldComparing, width, height, imageSrc, isSupported])
 
   if (!isSupported) {
     return (

@@ -1,6 +1,5 @@
 import React from 'react'
 import { SlidersHorizontal, RotateCcw } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
 
 export interface StretchSectionProps {
   scaleX: number
@@ -9,9 +8,7 @@ export interface StretchSectionProps {
   currentHeight: number
   onScaleXChange: (val: number) => void
   onScaleYChange: (val: number) => void
-  onApplyStretch: () => void
   onResetStretch: () => void
-  isProcessing?: boolean
 }
 
 export const StretchSection: React.FC<StretchSectionProps> = ({
@@ -21,11 +18,8 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
   currentHeight,
   onScaleXChange,
   onScaleYChange,
-  onApplyStretch,
   onResetStretch,
-  isProcessing,
 }) => {
-  const isChanged = scaleX !== 100 || scaleY !== 100
   const projectedW = Math.max(1, Math.round(currentWidth * (scaleX / 100)))
   const projectedH = Math.max(1, Math.round(currentHeight * (scaleY / 100)))
 
@@ -54,7 +48,7 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
       <div className="flex flex-col gap-1">
         <div className="flex justify-between items-center text-[10px] text-[#808096]">
           <span>SCALE X</span>
-          <span className="font-mono text-[#60A5FA] font-semibold">{scaleX}%</span>
+          <span className="font-mono text-[#60A5FA] font-semibold">{Math.round(scaleX)}%</span>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -62,7 +56,7 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
             min={10}
             max={300}
             step={1}
-            value={scaleX}
+            value={Math.round(scaleX)}
             onChange={(e) => onScaleXChange(Number(e.target.value))}
             className="w-full accent-[#3B82F6] cursor-pointer h-1.5 bg-[#20202E] rounded-lg"
           />
@@ -70,8 +64,8 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
             type="number"
             min={10}
             max={500}
-            value={scaleX}
-            onChange={(e) => onScaleXChange(Math.max(1, Number(e.target.value)))}
+            value={Math.round(scaleX)}
+            onChange={(e) => onScaleXChange(Math.max(10, Math.min(500, Number(e.target.value) || 100)))}
             className="w-16 bg-[#12121C] border border-[#2A2A3C] text-right font-mono text-xs px-1.5 py-1 rounded text-[#E0E0EC] outline-none"
           />
         </div>
@@ -81,7 +75,7 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
       <div className="flex flex-col gap-1">
         <div className="flex justify-between items-center text-[10px] text-[#808096]">
           <span>SCALE Y</span>
-          <span className="font-mono text-[#60A5FA] font-semibold">{scaleY}%</span>
+          <span className="font-mono text-[#60A5FA] font-semibold">{Math.round(scaleY)}%</span>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -89,7 +83,7 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
             min={10}
             max={300}
             step={1}
-            value={scaleY}
+            value={Math.round(scaleY)}
             onChange={(e) => onScaleYChange(Number(e.target.value))}
             className="w-full accent-[#3B82F6] cursor-pointer h-1.5 bg-[#20202E] rounded-lg"
           />
@@ -97,8 +91,8 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
             type="number"
             min={10}
             max={500}
-            value={scaleY}
-            onChange={(e) => onScaleYChange(Math.max(1, Number(e.target.value)))}
+            value={Math.round(scaleY)}
+            onChange={(e) => onScaleYChange(Math.max(10, Math.min(500, Number(e.target.value) || 100)))}
             className="w-16 bg-[#12121C] border border-[#2A2A3C] text-right font-mono text-xs px-1.5 py-1 rounded text-[#E0E0EC] outline-none"
           />
         </div>
@@ -108,17 +102,8 @@ export const StretchSection: React.FC<StretchSectionProps> = ({
 
       {/* Target Preview Readout */}
       <div className="text-[11px] text-[#707080] font-mono text-center">
-        Target: <span className="text-[#A0A0B8] font-semibold">{projectedW} × {projectedH} px</span>
+        Effective Size: <span className="text-[#A0A0B8] font-semibold">{projectedW} &times; {projectedH} px</span>
       </div>
-
-      <Button
-        variant="ghost"
-        onClick={onApplyStretch}
-        disabled={!isChanged || isProcessing}
-        className="w-full py-1.5 text-xs font-semibold bg-[#1E1E2C] hover:bg-[#262638] text-[#60A5FA] border border-[#3B82F6]/60 disabled:opacity-40 disabled:border-[#2A2A3A] disabled:text-[#707080]"
-      >
-        {isProcessing ? 'Stretching...' : 'Apply Stretch'}
-      </Button>
     </div>
   )
 }
