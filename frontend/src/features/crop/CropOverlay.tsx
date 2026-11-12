@@ -10,6 +10,7 @@ export interface CropOverlayProps {
   zoomScale: number
   onChange: (rect: CropRect) => void
   onDragStateChange?: (isDragging: boolean) => void
+  onCancel?: () => void
 }
 
 export const CropOverlay: React.FC<CropOverlayProps> = ({
@@ -20,6 +21,7 @@ export const CropOverlay: React.FC<CropOverlayProps> = ({
   zoomScale,
   onChange,
   onDragStateChange,
+  onCancel,
 }) => {
   const dragRef = useRef<{
     handle: CropHandle
@@ -77,7 +79,13 @@ export const CropOverlay: React.FC<CropOverlayProps> = ({
   const pathD = `M0 0 H${imageWidth} V${imageHeight} H0 Z M${cropRect.x} ${cropRect.y} V${cropRect.y + cropRect.height} H${cropRect.x + cropRect.width} V${cropRect.y} Z`
 
   return (
-    <div className="absolute inset-0 pointer-events-auto select-none overflow-visible">
+    <div
+      onContextMenu={(e) => {
+        e.preventDefault()
+        onCancel?.()
+      }}
+      className="absolute inset-0 pointer-events-auto select-none overflow-visible"
+    >
       {/* 1. Darkened backdrop mask outside crop box */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
         <path fill="rgba(0, 0, 0, 0.65)" fillRule="evenodd" d={pathD} />
