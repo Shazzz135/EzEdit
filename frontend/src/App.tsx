@@ -23,6 +23,7 @@ export const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = usePersistedToolCategory()
   const [tabLimitModalOpen, setTabLimitModalOpen] = useState(false)
   const [transferModalOpen, setTransferModalOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
   const [unsavedDoc, setUnsavedDoc] = useState<{ id: string; name: string } | null>(null)
   const [previewScale, setPreviewScale] = useState<{ x: number; y: number } | undefined>(undefined)
   const [splitActive, setSplitActive] = useState(false)
@@ -35,7 +36,7 @@ export const App: React.FC = () => {
   const {
     documents, activeDocumentId, setActiveDocument, getActiveDocument,
     updateAdjustments, resetAdjustments, updateOrientation, updateFilter, resetFilter,
-    closeDocument, applyRasterTransform, resetDocumentCompletely, transferEdits, undo, redo,
+    closeDocument, applyRasterTransform, resetDocumentCompletely, transferEdits, markDocumentExported, undo, redo,
   } = useDocumentStore()
   const activeDoc = getActiveDocument()
   const panZoom = useCanvasPanZoom()
@@ -121,6 +122,7 @@ export const App: React.FC = () => {
           onZoomOut: panZoom.zoomOut,
           isGrabActive: panZoom.isHandToolActive || panZoom.isSpacePressed,
           onToggleGrab: panZoom.toggleHandTool,
+          onExport: activeDoc ? () => setExportModalOpen(true) : undefined,
           onOpenAI: () => { setActiveCategory('ai'); resetToolStates(); },
           canUndo, canRedo, canMassReset: !!activeDoc, canTransferEdits: !!activeDoc && documents.length > 1, mobileSelector,
         }}
@@ -233,6 +235,8 @@ export const App: React.FC = () => {
         onDiscardUnsavedDoc={() => { if (unsavedDoc) closeDocument(unsavedDoc.id); setUnsavedDoc(null) }}
         quotaWarning={quotaWarning} onDismissQuotaWarning={dismissQuotaWarning}
         transferModalOpen={transferModalOpen} onCloseTransferModal={() => setTransferModalOpen(false)}
+        exportModalOpen={exportModalOpen} onCloseExportModal={() => setExportModalOpen(false)}
+        onExportSuccess={markDocumentExported}
         activeDoc={activeDoc} documents={documents}
         onTransferEdits={(srcId, targetIds, cats) => {
           transferEdits(srcId, targetIds, cats)
