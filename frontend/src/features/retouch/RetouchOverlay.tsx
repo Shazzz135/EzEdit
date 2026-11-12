@@ -11,17 +11,22 @@ export interface RetouchOverlayProps {
   settings: RetouchSettings
   sourcePoint: Point | null
   isAltPressed: boolean
+  paintedMaskPaths?: Point[][]
   onSetSourcePoint: (pt: Point) => void
   onCommitTransform: (result: { url: string; blob: Blob; width: number; height: number }) => void
+  onAddMaskPath?: (pts: Point[]) => void
+  onClearMaskPaths?: () => void
 }
 
 export const RetouchOverlay: React.FC<RetouchOverlayProps> = ({
   imageSrc, imageWidth, imageHeight, zoomScale, tool, settings,
-  sourcePoint, isAltPressed, onSetSourcePoint, onCommitTransform,
+  sourcePoint, isAltPressed, paintedMaskPaths = [], onSetSourcePoint,
+  onCommitTransform, onAddMaskPath, onClearMaskPaths,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [cursorPos, setCursorPos] = useState<Point | null>(null)
   const [isPointerOver, setIsPointerOver] = useState(false)
+  const [activeMaskPts, setActiveMaskPts] = useState<Point[]>([])
   const isPaintingRef = useRef(false)
   const initialSourceRef = useRef<Point | null>(null)
   const initialTargetRef = useRef<Point | null>(null)
@@ -55,31 +60,31 @@ export const RetouchOverlay: React.FC<RetouchOverlayProps> = ({
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const pt = getImageCoords(e)
-
-    // Right-click: set sample anchor point for Clone Stamp & Healing Brush
     if (e.button === 2) {
-      e.preventDefault()
-      e.stopPropagation()
-      if (tool !== 'spot-heal') {
-        onSetSourcePoint(pt)
-      }
+      e.preventDefault(); e.stopPropagation()
+      if (tool === 'object-remove') onClearMaskPaths?.()
+      else if (tool !== 'spot-heal') onSetSourcePoint(pt)
       return
     }
-
     if (e.button !== 0) return
+
+    if (tool === 'object-remove') {
+      isPaintingRef.current = true
+      setActiveMaskPts([pt])
+      e.currentTarget.setPointerCapture(e.pointerId)
+      return
+    }
 
     if (isAltPressed || e.altKey) {
       if (tool !== 'spot-heal') onSetSourcePoint(pt)
       return
     }
-
     if ((tool === 'clone-stamp' || tool === 'healing-brush') && !sourcePoint) return
 
     isPaintingRef.current = true
     initialTargetRef.current = pt
     initialSourceRef.current = sourcePoint ? { ...sourcePoint } : null
     e.currentTarget.setPointerCapture(e.pointerId)
-
     applyStrokeAt(pt)
   }
 
@@ -94,10 +99,7 @@ export const RetouchOverlay: React.FC<RetouchOverlayProps> = ({
     } else if (initialSourceRef.current && initialTargetRef.current) {
       const offsetX = targetPt.x - initialTargetRef.current.x
       const offsetY = targetPt.y - initialTargetRef.current.y
-      const currentSrc = {
-        x: initialSourceRef.current.x + offsetX,
-        y: initialSourceRef.current.y + offsetY,
-      }
+      const currentSrc = { x: initialSourceRef.current.x + offsetX, y: initialSourceRef.current.y + offsetY }
       if (tool === 'clone-stamp') {
         applyCloneStampPatch(wctx, baseImg, currentSrc, targetPt, settings.radius, settings.hardness, settings.opacity)
       } else if (tool === 'healing-brush') {
@@ -109,13 +111,24 @@ export const RetouchOverlay: React.FC<RetouchOverlayProps> = ({
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const pt = getImageCoords(e)
     setCursorPos(pt)
-    if (isPaintingRef.current) applyStrokeAt(pt)
+    if (!isPaintingRef.current) return
+    if (tool === 'object-remove') {
+      setActiveMaskPts((prev) => [...prev, pt])
+    } else {
+      applyStrokeAt(pt)
+    }
   }
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isPaintingRef.current) return
     isPaintingRef.current = false
     try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
+
+    if (tool === 'object-remove') {
+      if (activeMaskPts.length >= 2) onAddMaskPath?.(activeMaskPts)
+      setActiveMaskPts([])
+      return
+    }
 
     const wc = workingCanvasRef.current
     if (!wc) return
@@ -126,17 +139,33 @@ export const RetouchOverlay: React.FC<RetouchOverlayProps> = ({
     }, 'image/png')
   }
 
-  // Draw overlay ring and source crosshairs
+  // Draw overlay ring, masks, and source crosshairs
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-
     ctx.clearRect(0, 0, imageWidth, imageHeight)
 
+    // Render Inpainting / Object Removal Masks
+    const allPaths = [...paintedMaskPaths, ...(activeMaskPts.length > 0 ? [activeMaskPts] : [])]
+    for (const path of allPaths) {
+      if (path.length < 2) continue
+      ctx.save()
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.35)'
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)'
+      ctx.lineWidth = settings.radius * 2
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.beginPath()
+      ctx.moveTo(path[0].x, path[0].y)
+      for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y)
+      ctx.stroke()
+      ctx.restore()
+    }
+
     // Source Point Anchor Marker
-    if (sourcePoint && tool !== 'spot-heal') {
+    if (sourcePoint && tool !== 'spot-heal' && tool !== 'object-remove') {
       ctx.save()
       ctx.strokeStyle = '#60A5FA'
       ctx.lineWidth = 1.5 / Math.max(0.1, zoomScale)
@@ -155,23 +184,13 @@ export const RetouchOverlay: React.FC<RetouchOverlayProps> = ({
       ctx.save()
       ctx.beginPath()
       ctx.arc(cursorPos.x, cursorPos.y, settings.radius, 0, Math.PI * 2)
-      ctx.strokeStyle = isAltPressed ? '#F59E0B' : '#60A5FA'
+      ctx.strokeStyle = tool === 'object-remove' ? '#EF4444' : isAltPressed ? '#F59E0B' : '#60A5FA'
       ctx.lineWidth = 1.5 / Math.max(0.1, zoomScale)
       ctx.setLineDash([4 / Math.max(0.1, zoomScale), 3 / Math.max(0.1, zoomScale)])
       ctx.stroke()
-
-      if (isAltPressed) {
-        ctx.setLineDash([])
-        ctx.beginPath()
-        ctx.moveTo(cursorPos.x - 8 / Math.max(0.1, zoomScale), cursorPos.y)
-        ctx.lineTo(cursorPos.x + 8 / Math.max(0.1, zoomScale), cursorPos.y)
-        ctx.moveTo(cursorPos.x, cursorPos.y - 8 / Math.max(0.1, zoomScale))
-        ctx.lineTo(cursorPos.x, cursorPos.y + 8 / Math.max(0.1, zoomScale))
-        ctx.stroke()
-      }
       ctx.restore()
     }
-  }, [imageWidth, imageHeight, zoomScale, cursorPos, isPointerOver, sourcePoint, isAltPressed, settings, tool])
+  }, [imageWidth, imageHeight, zoomScale, cursorPos, isPointerOver, sourcePoint, isAltPressed, settings, tool, paintedMaskPaths, activeMaskPts])
 
   return (
     <canvas
@@ -184,8 +203,8 @@ export const RetouchOverlay: React.FC<RetouchOverlayProps> = ({
       onPointerEnter={() => setIsPointerOver(true)}
       onPointerLeave={() => { setIsPointerOver(false); setCursorPos(null); }}
       onContextMenu={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
+        e.preventDefault(); e.stopPropagation()
+        if (tool === 'object-remove') { onClearMaskPaths?.(); return; }
         if (tool !== 'spot-heal' && canvasRef.current) {
           const rect = canvasRef.current.getBoundingClientRect()
           const effectiveScale = rect.width / imageWidth

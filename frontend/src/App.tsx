@@ -163,6 +163,7 @@ export const App: React.FC = () => {
               <RetouchOverlay
                 imageSrc={activeDoc.imageSrc} imageWidth={activeDoc.currentWidth} imageHeight={activeDoc.currentHeight} zoomScale={scale}
                 tool={retouch.tool} settings={retouch.settings} sourcePoint={retouch.sourcePoint} isAltPressed={retouch.isAltPressed}
+                paintedMaskPaths={retouch.paintedMaskPaths} onAddMaskPath={retouch.addMaskPath} onClearMaskPaths={retouch.clearMaskPaths}
                 onSetSourcePoint={retouch.setSourcePoint} onCommitTransform={handleApplyTransform}
               />
             ) : undefined}
@@ -190,9 +191,13 @@ export const App: React.FC = () => {
             rotationAngle={rotationAngle} onRotateChange={setRotationAngle}
             retouchProps={{
               tool: retouch.tool, settings: retouch.settings, sourcePoint: retouch.sourcePoint,
+              hasMask: retouch.paintedMaskPaths.length > 0 || selection.state.hasSelection,
+              isProcessingInpaint: retouch.isProcessingInpaint, inpaintProgress: retouch.inpaintProgress,
               onSelectTool: retouch.setTool, onChangeRadius: retouch.setRadius,
               onChangeHardness: retouch.setHardness, onChangeOpacity: retouch.setOpacity,
-              onClearSourcePoint: retouch.clearSourcePoint,
+              onChangeInpaintMethod: retouch.setInpaintMethod, onChangeInpaintPrompt: retouch.setInpaintPrompt,
+              onClearSourcePoint: retouch.clearSourcePoint, onClearMask: retouch.clearMaskPaths,
+              onExecuteInpaint: () => retouch.handleExecuteInpaint(activeDoc, handleApplyTransform, selection.state.paths),
             }}
             selectionProps={{
               state: selection.state, onSelectTool: selection.setTool,
