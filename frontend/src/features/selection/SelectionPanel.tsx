@@ -4,8 +4,6 @@ import {
   Circle,
   Lasso,
   Pentagon,
-  Plus,
-  Minus,
   RotateCcw,
   Scissors,
   Copy,
@@ -16,13 +14,11 @@ import { PrecisionSlider } from '@/components/ui/PrecisionSlider'
 import {
   type SelectionState,
   type SelectionToolType,
-  type SelectionMode,
 } from '@/types/selection'
 
 export interface SelectionPanelProps {
   state: SelectionState
   onSelectTool: (tool: SelectionToolType) => void
-  onSelectMode: (mode: SelectionMode) => void
   onChangeFeather: (feather: number) => void
   onToggleInvert: () => void
   onClearSelection: () => void
@@ -37,15 +33,9 @@ const TOOLS: { id: SelectionToolType; label: string; icon: React.FC<{ className?
   { id: 'poly-lasso', label: 'Poly Lasso', icon: Pentagon },
 ]
 
-const MODES: { id: SelectionMode; label: string; icon: React.FC<{ className?: string }> }[] = [
-  { id: 'add', label: 'Add (+)', icon: Plus },
-  { id: 'subtract', label: 'Subtract (-)', icon: Minus },
-]
-
 export const SelectionPanel: React.FC<SelectionPanelProps> = ({
   state,
   onSelectTool,
-  onSelectMode,
   onChangeFeather,
   onToggleInvert,
   onClearSelection,
@@ -65,7 +55,7 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
         <button
           type="button"
           onClick={onClearSelection}
-          title="Clear Selection (Esc / Ctrl+D)"
+          title="Clear Selection (Esc / Ctrl+D / Right-Click)"
           className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
@@ -99,34 +89,6 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
       {/* Bold Separator */}
       <div className="h-[2px] bg-[#323246] w-full rounded-full my-0.5" />
 
-      {/* Boolean Mode Selector */}
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[11px] font-semibold text-[#808096] uppercase tracking-wider">
-          Selection Mode
-        </span>
-        <div className="grid grid-cols-3 gap-1.5">
-          {MODES.map((m) => {
-            const Icon = m.icon
-            const isSelected = state.mode === m.id
-            return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => onSelectMode(m.id)}
-                className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md border text-xs font-medium transition-colors cursor-pointer ${
-                  isSelected
-                    ? 'border-[#60A5FA] bg-[#1E1E2C] text-[#F4F4F6]'
-                    : 'border-[#262636] bg-[#161622]/60 hover:bg-[#1A1A28] text-[#A0A0B2]'
-                }`}
-              >
-                <Icon className="w-3 h-3 text-[#60A5FA]" />
-                <span>{m.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
       {/* Feather Radius Slider */}
       <div className="flex flex-col gap-2 pt-1">
         <PrecisionSlider
@@ -150,71 +112,53 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
           <button
             type="button"
             onClick={onCopySelection}
-            title="Copy Selection (Ctrl+C)"
             disabled={!state.hasSelection}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-medium transition-colors ${
-              state.hasSelection
-                ? 'border-[#262636] bg-[#161622]/60 hover:bg-[#1A1A28] text-[#F4F4F6] cursor-pointer'
-                : 'border-[#20202A] text-[#505060] cursor-not-allowed opacity-50'
-            }`}
+            title="Copy selection to clipboard (Ctrl+C)"
+            className="flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg border border-[#28283A] bg-[#161622]/60 hover:bg-[#1A1A28] text-xs font-medium text-[#F4F4F6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             <Copy className="w-3.5 h-3.5 text-[#60A5FA]" />
             <span>Copy</span>
-            <span className="text-[10px] text-[#707084] font-mono">^C</span>
           </button>
-
           <button
             type="button"
             onClick={onCutSelection}
-            title="Cut Selection (Ctrl+X)"
             disabled={!state.hasSelection}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-medium transition-colors ${
-              state.hasSelection
-                ? 'border-[#262636] bg-[#161622]/60 hover:bg-[#1A1A28] text-[#F4F4F6] cursor-pointer'
-                : 'border-[#20202A] text-[#505060] cursor-not-allowed opacity-50'
-            }`}
+            title="Cut selection from document (Ctrl+X)"
+            className="flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg border border-[#28283A] bg-[#161622]/60 hover:bg-[#1A1A28] text-xs font-medium text-[#F4F4F6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             <Scissors className="w-3.5 h-3.5 text-[#60A5FA]" />
             <span>Cut</span>
-            <span className="text-[10px] text-[#707084] font-mono">^X</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={onToggleInvert}
-            title="Invert Selection (Ctrl+I)"
-            disabled={!state.hasSelection}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-medium transition-colors ${
-              state.hasSelection
-                ? state.inverted
-                  ? 'border-[#60A5FA] bg-[#1E1E2C] text-[#60A5FA] cursor-pointer'
-                  : 'border-[#262636] bg-[#161622]/60 hover:bg-[#1A1A28] text-[#F4F4F6] cursor-pointer'
-                : 'border-[#20202A] text-[#505060] cursor-not-allowed opacity-50'
-            }`}
-          >
+        <button
+          type="button"
+          onClick={onToggleInvert}
+          disabled={!state.hasSelection}
+          className={`flex items-center justify-between p-2 rounded-lg border text-xs transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+            state.inverted
+              ? 'border-[#60A5FA] bg-[#1E1E2C] text-[#60A5FA]'
+              : 'border-[#262636] bg-[#161622]/60 hover:bg-[#1A1A28] text-[#C0C0D0]'
+          }`}
+        >
+          <div className="flex items-center gap-2">
             <FlipHorizontal className="w-3.5 h-3.5 text-[#60A5FA]" />
-            <span>{state.inverted ? 'Inverted' : 'Invert'}</span>
-            <span className="text-[10px] text-[#707084] font-mono">^I</span>
-          </button>
+            <span>Invert Selection</span>
+          </div>
+          <span className="text-[10px] font-mono">
+            {state.inverted ? 'Inverted' : 'Normal'}
+          </span>
+        </button>
 
-          <button
-            type="button"
-            onClick={onClearSelection}
-            title="Clear Selection (Ctrl+D / Esc)"
-            disabled={!state.hasSelection}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-medium transition-colors ${
-              state.hasSelection
-                ? 'border-[#262636] bg-[#161622]/60 hover:bg-[#1A1A28] text-[#F4F4F6] cursor-pointer'
-                : 'border-[#20202A] text-[#505060] cursor-not-allowed opacity-50'
-            }`}
-          >
-            <X className="w-3.5 h-3.5 text-[#60A5FA]" />
-            <span>Deselect</span>
-            <span className="text-[10px] text-[#707084] font-mono">^D</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onClearSelection}
+          disabled={!state.hasSelection}
+          className="flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-[#28283A] bg-[#161622]/40 hover:bg-[#1A1A28] text-xs text-[#808096] hover:text-[#D0D0E0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+        >
+          <X className="w-3.5 h-3.5 text-[#60A5FA]" />
+          <span>Deselect (Ctrl+D)</span>
+        </button>
       </div>
     </div>
   )

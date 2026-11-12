@@ -66,28 +66,26 @@ describe('Milestone 6 - Issue 6.2: Background Removal & Transparency Engine', ()
       const width = 4
       const height = 4
       const data = new Uint8ClampedArray(width * height * 4)
-      data.fill(255)
+      data.fill(255) // white border
 
-      const setCenter = (x: number, y: number) => {
-        const idx = (y * width + x) * 4
-        data[idx] = 0
-        data[idx + 1] = 0
-        data[idx + 2] = 0
-        data[idx + 3] = 255
+      // Center 2x2 to black (subject)
+      for (let y = 1; y <= 2; y++) {
+        for (let x = 1; x <= 2; x++) {
+          const idx = (y * width + x) * 4
+          data[idx] = 0
+          data[idx + 1] = 0
+          data[idx + 2] = 0
+          data[idx + 3] = 255
+        }
       }
-      setCenter(1, 1)
-      setCenter(2, 1)
-      setCenter(1, 2)
-      setCenter(2, 2)
 
       const imgData: ImageData = { width, height, data, colorSpace: 'srgb' }
-      const result = removeBackgroundFloodFill(imgData, { tolerance: 20, contiguous: true, feather: 0, invert: true })
+      const result = removeBackgroundFloodFill(imgData, { tolerance: 20, invert: true, feather: 0 })
 
-      // Inverted: outer boundary remains opaque
-      expect(result.data[0 * 4 + 3]).toBe(255)
-      // Center subject becomes transparent
+      // Inverted: white border should remain opaque, black center should be transparent
+      expect(result.data[0 * 4 + 3]).toBe(255) // top-left
       const centerIdx = (1 * width + 1) * 4
-      expect(result.data[centerIdx + 3]).toBe(0)
+      expect(result.data[centerIdx + 3]).toBe(0) // center erased
     })
   })
 

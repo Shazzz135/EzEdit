@@ -50,7 +50,7 @@ export interface ToolsPanelProps {
   selectionProps?: SelectionPanelProps
   cutoutProps?: CutoutPanelProps
   selectionSubTab?: 'vector' | 'cutout'
-  onSelectSubTab?: (tab: 'vector' | 'cutout') => void
+  onSelectSelectionSubTab?: (subTab: 'vector' | 'cutout') => void
 }
 
 export const ToolsPanel: React.FC<ToolsPanelProps> = ({
@@ -75,11 +75,9 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   onHoldCompareEnd = () => {},
   selectionProps,
   cutoutProps,
-  selectionSubTab: externalSubTab = 'vector',
-  onSelectSubTab,
+  selectionSubTab = 'vector',
+  onSelectSelectionSubTab,
 }) => {
-  const [internalSubTab, setInternalSubTab] = React.useState<'vector' | 'cutout'>(externalSubTab)
-  const currentSubTab = onSelectSubTab ? externalSubTab : internalSubTab
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Category Dropdown Selector at Top */}
@@ -133,37 +131,29 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
             <div className="flex rounded-lg bg-[#14141E] p-0.5 border border-[#242432]">
               <button
                 type="button"
-                onClick={() => {
-                  selectionProps?.onClearSelection?.()
-                  setInternalSubTab('vector')
-                  onSelectSubTab?.('vector')
-                }}
+                onClick={() => onSelectSelectionSubTab?.('vector')}
                 className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                  currentSubTab === 'vector' ? 'bg-[#20202E] text-[#F4F4F6]' : 'text-[#808092] hover:text-[#D0D0E0]'
+                  selectionSubTab === 'vector' ? 'bg-[#20202E] text-[#F4F4F6]' : 'text-[#808092] hover:text-[#D0D0E0]'
                 }`}
               >
                 Vector Selection
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  selectionProps?.onClearSelection?.()
-                  setInternalSubTab('cutout')
-                  onSelectSubTab?.('cutout')
-                }}
+                onClick={() => onSelectSelectionSubTab?.('cutout')}
                 className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                  currentSubTab === 'cutout' ? 'bg-[#20202E] text-[#F4F4F6]' : 'text-[#808092] hover:text-[#D0D0E0]'
+                  selectionSubTab === 'cutout' ? 'bg-[#20202E] text-[#F4F4F6]' : 'text-[#808092] hover:text-[#D0D0E0]'
                 }`}
               >
                 Background Removal
               </button>
             </div>
 
-            {currentSubTab === 'vector' && selectionProps && (
+            {selectionSubTab === 'vector' && selectionProps && (
               <SelectionPanel {...selectionProps} />
             )}
 
-            {currentSubTab === 'cutout' && cutoutProps && (
+            {selectionSubTab === 'cutout' && cutoutProps && (
               <CutoutPanel {...cutoutProps} />
             )}
           </div>

@@ -110,6 +110,10 @@ export function combinePaths(
 ): Point[][] {
   if (newPath.length < 3) return existing
 
+  if (mode === 'new') {
+    return [newPath]
+  }
+
   if (mode === 'add') {
     return [...existing, newPath]
   }

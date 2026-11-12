@@ -5,26 +5,13 @@ import {
   removeBackgroundFromSelection,
 } from './backgroundRemoval'
 
-export async function callRemoveBgApi(imageSrc: string, apiKey: string): Promise<Blob> {
-  const fetchRes = await fetch(imageSrc)
-  const imageBlob = await fetchRes.blob()
-
-  const formData = new FormData()
-  formData.append('image_file', imageBlob)
-  formData.append('size', 'auto')
-
-  const res = await fetch('https://api.remove.bg/v1.0/removebg', {
-    method: 'POST',
-    headers: { 'X-Api-Key': apiKey },
-    body: formData,
+function getImageDimensions(url: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const i = new Image()
+    i.onload = () => resolve({ width: i.naturalWidth, height: i.naturalHeight })
+    i.onerror = () => resolve({ width: 800, height: 600 })
+    i.src = url
   })
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '')
-    throw new Error(`remove.bg API error (${res.status}): ${errText || res.statusText}`)
-  }
-
-  return await res.blob()
 }
 
 export async function executeCutout(
@@ -32,40 +19,58 @@ export async function executeCutout(
   options: RemoveBackgroundOptions = {},
   paths?: Point[][]
 ): Promise<{ blob: Blob; url: string; width: number; height: number }> {
-  // 1. If remove.bg API key provided, call official remove.bg API
-  if (!paths?.length && options.removeBgApiKey) {
-    try {
-      const apiBlob = await callRemoveBgApi(imageSrc, options.removeBgApiKey)
-      const url = URL.createObjectURL(apiBlob)
-      const dims = await new Promise<{ width: number; height: number }>((resolve) => {
-        const i = new Image()
-        i.onload = () => resolve({ width: i.naturalWidth, height: i.naturalHeight })
-        i.src = url
-      })
-      return { blob: apiBlob, url, width: dims.width, height: dims.height }
-    } catch (err) {
-      console.warn('remove.bg API call failed, falling back to neural model:', err)
-    }
+  // Selection-based cutout
+  if (paths && paths.length > 0) {
+    return executeRasterCutout(imageSrc, options, paths)
   }
 
-  // 2. Try neural AI background removal for auto cutout
-  if (!paths?.length && options.useAi !== false) {
+  // 1. Try local rembg HTTP server (e.g. rembg s --port 5000)
+  if (options.useAi !== false) {
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 1200)
+      const imgRes = await fetch(imageSrc)
+      const imgBlob = await imgRes.blob()
+      const formData = new FormData()
+      formData.append('file', imgBlob, 'image.png')
+
+      const rembgRes = await fetch('http://localhost:5000/api/remove', {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+      })
+      clearTimeout(timer)
+      if (rembgRes.ok) {
+        const blob = await rembgRes.blob()
+        const url = URL.createObjectURL(blob)
+        const dims = await getImageDimensions(url)
+        return { blob, url, width: dims.width, height: dims.height }
+      }
+    } catch {
+      // Proceed to client-side rembg neural model
+    }
+
+    // 2. Client-side neural background removal (IS-Net / U2-Net rembg model via WebAssembly)
     try {
       const { removeBackground } = await import('@imgly/background-removal')
       const aiBlob = await removeBackground(imageSrc)
       const aiUrl = URL.createObjectURL(aiBlob)
-      const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
-        const i = new Image()
-        i.onload = () => resolve({ width: i.naturalWidth, height: i.naturalHeight })
-        i.src = aiUrl
-      })
-      return { blob: aiBlob, url: aiUrl, width: dimensions.width, height: dimensions.height }
+      const dims = await getImageDimensions(aiUrl)
+      return { blob: aiBlob, url: aiUrl, width: dims.width, height: dims.height }
     } catch (err) {
-      console.warn('AI background removal unavailable, using precision flood fill:', err)
+      console.warn('Neural background removal unavailable, using fallback flood-fill:', err)
     }
   }
 
-  // 3. Client-side canvas raster processing (selection cutout or fallback)
+  // 3. Fallback: perceptual color distance flood-fill
+  return executeRasterCutout(imageSrc, options)
+}
+
+function executeRasterCutout(
+  imageSrc: string,
+  options: RemoveBackgroundOptions = {},
+  paths?: Point[][]
+): Promise<{ blob: Blob; url: string; width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.crossOrigin = 'anonymous'
