@@ -7,6 +7,11 @@ export interface Point {
   y: number
 }
 
+export interface MaskStroke {
+  points: Point[]
+  radius: number
+}
+
 export interface RetouchSettings {
   radius: number // Brush radius in pixels (2 - 150)
   hardness: number // Edge hardness 0.0 to 1.0

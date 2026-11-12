@@ -155,6 +155,43 @@ describe('Retouching Math & Algorithms', () => {
       const result = runInpaintingMath(img, mask, width, height)
       expect(result).toEqual(img)
     })
+
+    it('dilates mask to absorb object edge fringe and synthesizes clean background on larger images', () => {
+      const width = 48
+      const height = 48
+      const img = new Uint8ClampedArray(width * height * 4)
+      const mask = new Uint8ClampedArray(width * height * 4)
+
+      for (let i = 0; i < width * height; i++) {
+        img[i * 4] = 40
+        img[i * 4 + 1] = 180
+        img[i * 4 + 2] = 220
+        img[i * 4 + 3] = 255
+      }
+
+      // Red unwanted object from (18,18) to (30,30), but user mask only covers (19,19) to (29,29)
+      for (let y = 18; y <= 30; y++) {
+        for (let x = 18; x <= 30; x++) {
+          const idx = (y * width + x) * 4
+          img[idx] = 250
+          img[idx + 1] = 10
+          img[idx + 2] = 10
+        }
+      }
+      for (let y = 19; y <= 29; y++) {
+        for (let x = 19; x <= 29; x++) {
+          const idx = (y * width + x) * 4
+          mask[idx] = 255
+          mask[idx + 3] = 255
+        }
+      }
+
+      const result = runInpaintingMath(img, mask, width, height)
+      const centerIdx = (24 * width + 24) * 4
+      expect(result[centerIdx]).toBeLessThan(80)
+      expect(result[centerIdx + 1]).toBeGreaterThan(150)
+      expect(result[centerIdx + 2]).toBeGreaterThan(190)
+    })
   })
 
   describe('executePollinationsInpainting', () => {
