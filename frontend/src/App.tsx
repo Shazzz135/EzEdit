@@ -46,7 +46,7 @@ export const App: React.FC = () => {
   } = useDocumentStore()
   const activeDoc = getActiveDocument()
   const crop = useCropState()
-  const selection = useSelectionState(activeCategory === 'selection', { onCopy: () => handleCopySelection(), onCut: () => handleCutSelection() })
+  const selection = useSelectionState(activeCategory === 'selection' && selectionSubTab === 'vector', { onCopy: () => handleCopySelection(), onCut: () => handleCutSelection() })
   const { oversizedFile, setOversizedFile, handleDropFile, handleDownscaleAndImport } =
     useImageImport(() => setTabLimitModalOpen(true))
 
@@ -76,6 +76,11 @@ export const App: React.FC = () => {
     setSplitActive(false)
     setIsHoldComparing(false)
   }
+
+  const handleSelectSelectionSubTab = useCallback((subTab: 'vector' | 'cutout') => {
+    setSelectionSubTab(subTab)
+    selection.clearSelection()
+  }, [selection])
 
   useUndoRedoShortcuts(activeDoc, undo, redo)
 
@@ -180,10 +185,7 @@ export const App: React.FC = () => {
               resetToolStates()
             }}
             selectionSubTab={selectionSubTab}
-            onSelectSubTab={(tab) => {
-              setSelectionSubTab(tab)
-              selection.clearSelection()
-            }}
+            onSelectSelectionSubTab={handleSelectSelectionSubTab}
             activeDoc={activeDoc}
             onUpdateAdjustments={updateAdjustments}
             onResetAdjustments={resetAdjustments}
@@ -196,7 +198,7 @@ export const App: React.FC = () => {
             onApplyTransform={handleApplyTransform} onPreviewScaleChange={setPreviewScale}
             rotationAngle={rotationAngle} onRotateChange={setRotationAngle}
             selectionProps={{
-              state: selection.state, onSelectTool: selection.setTool, onSelectMode: selection.setMode,
+              state: selection.state, onSelectTool: selection.setTool,
               onChangeFeather: selection.setFeather, onToggleInvert: selection.toggleInvert,
               onClearSelection: selection.clearSelection, onCopySelection: handleCopySelection, onCutSelection: handleCutSelection,
             }}

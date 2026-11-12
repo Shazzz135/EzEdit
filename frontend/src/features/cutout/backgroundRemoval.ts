@@ -8,7 +8,6 @@ export interface RemoveBackgroundOptions {
   contiguous?: boolean   // default true
   sampleColor?: { r: number; g: number; b: number }
   useAi?: boolean        // Use AI neural background removal if available
-  removeBgApiKey?: string // Optional remove.bg API key
 }
 
 // Redmean perceptual color distance (approximates CIE76 human eye perception)
@@ -85,6 +84,7 @@ export function removeBackgroundFloodFill(imageData: ImageData, options: RemoveB
   const { width, height, data } = imageData
 
   const targetColor = sampleColor || sampleEdgeColor(data, width, height)
+  // Scale 1-100 tolerance to perceptual Redmean max (765)
   const maxDist = (tolerance / 100) * 400
   const rawMask = new Float32Array(width * height) // 1.0 = remove, 0.0 = keep
 
@@ -99,7 +99,7 @@ export function removeBackgroundFloodFill(imageData: ImageData, options: RemoveB
     const queue: number[] = []
     const visited = new Uint8Array(width * height)
 
-    // Seed top edge and upper side boundaries to protect subject below
+    // Auto: seed top edge and upper side boundaries to protect subject below
     for (let x = 0; x < width; x++) queue.push(x)
     const maxSideY = Math.min(height - 1, Math.floor(height * 0.45))
     for (let y = 1; y <= maxSideY; y++) {

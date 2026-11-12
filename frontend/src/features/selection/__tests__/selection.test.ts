@@ -102,8 +102,8 @@ describe('Milestone 6 - Issue 6.1: Vector Selection Geometry & Modes', () => {
       { x: 200, y: 300 },
     ]
 
-    it('creates initial path in add mode when empty', () => {
-      const result = combinePaths([], pathB, 'add')
+    it('replaces existing paths in new mode', () => {
+      const result = combinePaths([pathA], pathB, 'new')
       expect(result).toHaveLength(1)
       expect(result[0]).toEqual(pathB)
     })

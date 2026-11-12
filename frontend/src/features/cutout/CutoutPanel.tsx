@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   Eraser,
   Sparkles,
@@ -7,12 +7,9 @@ import {
   Scissors,
   CheckCircle2,
   Circle,
-  KeyRound,
 } from 'lucide-react'
 import { PrecisionSlider } from '@/components/ui/PrecisionSlider'
 import { type RemoveBackgroundOptions } from './backgroundRemoval'
-
-const STORAGE_KEY_REMOVE_BG = 'ezedit_remove_bg_key'
 
 export interface CutoutPanelProps {
   hasSelection?: boolean
@@ -31,34 +28,12 @@ export const CutoutPanel: React.FC<CutoutPanelProps> = ({
   const [feather, setFeather] = useState(2)
   const [contiguous, setContiguous] = useState(true)
   const [invert, setInvert] = useState(false)
-  const [apiKey, setApiKey] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY_REMOVE_BG) || '' } catch { return '' }
-  })
-
-  useEffect(() => {
-    try {
-      if (apiKey) localStorage.setItem(STORAGE_KEY_REMOVE_BG, apiKey)
-      else localStorage.removeItem(STORAGE_KEY_REMOVE_BG)
-    } catch { /* storage restricted */ }
-  }, [apiKey])
 
   const handleResetDefaults = () => {
     setTolerance(25)
     setFeather(2)
     setContiguous(true)
     setInvert(false)
-  }
-
-  const handleAutoClick = async () => {
-    if (isProcessing) return
-    await onExecuteAutoCutout({
-      tolerance,
-      feather,
-      contiguous,
-      invert,
-      removeBgApiKey: apiKey.trim() || undefined,
-      useAi: true,
-    })
   }
 
   return (
@@ -82,10 +57,10 @@ export const CutoutPanel: React.FC<CutoutPanelProps> = ({
         </button>
       </div>
 
-      {/* Main Remove Background Action */}
+      {/* Main Auto AI Remove Action (rembg) */}
       <button
         type="button"
-        onClick={handleAutoClick}
+        onClick={() => onExecuteAutoCutout({ tolerance, feather, contiguous, invert, useAi: true })}
         disabled={isProcessing}
         className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-xs font-semibold transition-all ${
           isProcessing
@@ -94,26 +69,8 @@ export const CutoutPanel: React.FC<CutoutPanelProps> = ({
         }`}
       >
         <Sparkles className="w-4 h-4 text-[#60A5FA]" />
-        <span>{isProcessing ? 'Removing Background...' : apiKey.trim() ? 'Remove Background (remove.bg)' : 'Remove Background (AI)'}</span>
+        <span>{isProcessing ? 'Removing Background with rembg...' : 'Auto Remove Background (rembg AI)'}</span>
       </button>
-
-      {/* remove.bg API Key Configuration */}
-      <div className="flex flex-col gap-1 p-2 bg-[#12121A] border border-[#20202E] rounded-lg">
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#808098]">
-          <KeyRound className="w-3 h-3 text-[#60A5FA]" />
-          <span>remove.bg API Key (Optional)</span>
-        </div>
-        <input
-          type="password"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          placeholder="Paste API key for remove.bg..."
-          className="w-full px-2 py-1 bg-[#181824] border border-[#2A2A3C] rounded text-xs text-[#E0E0EC] placeholder:text-[#505060] focus:border-[#60A5FA] outline-none"
-        />
-        <span className="text-[10px] text-[#606075]">
-          Uses remove.bg API when key is provided, or built-in neural AI when blank.
-        </span>
-      </div>
 
       {/* Selection-Based Cutouts (if vector selection exists) */}
       {hasSelection && (
@@ -178,19 +135,19 @@ export const CutoutPanel: React.FC<CutoutPanelProps> = ({
       <div className="flex flex-col gap-2">
         <button
           type="button"
-          onClick={() => setContiguous((v) => !v)}
+          onClick={() => setContiguous((prev) => !prev)}
           className="flex items-center justify-between p-2 rounded-lg border border-[#262636] bg-[#161622]/60 hover:bg-[#1A1A28] text-xs text-[#C0C0D0] transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2">
             {contiguous ? <CheckCircle2 className="w-3.5 h-3.5 text-[#60A5FA]" /> : <Circle className="w-3.5 h-3.5 text-[#606070]" />}
-            <span>Contiguous Edge Fill</span>
+            <span>Contiguous Fill</span>
           </div>
-          <span className="text-[10px] text-[#707080] font-mono">{contiguous ? 'Edges Only' : 'Global'}</span>
+          <span className="text-[10px] text-[#707080] font-mono">{contiguous ? 'Connected Only' : 'Global Color'}</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setInvert((v) => !v)}
+          onClick={() => setInvert((prev) => !prev)}
           className={`flex items-center justify-between p-2 rounded-lg border text-xs transition-colors cursor-pointer ${
             invert ? 'border-[#60A5FA] bg-[#1E1E2C] text-[#60A5FA]' : 'border-[#262636] bg-[#161622]/60 hover:bg-[#1A1A28] text-[#C0C0D0]'
           }`}
