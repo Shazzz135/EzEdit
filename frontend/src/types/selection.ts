@@ -4,7 +4,7 @@ export type SelectionToolType =
   | 'lasso'
   | 'poly-lasso'
 
-export type SelectionMode = 'new' | 'add' | 'subtract'
+export type SelectionMode = 'add' | 'subtract'
 
 export interface Point {
   x: number
@@ -22,7 +22,7 @@ export interface SelectionState {
 
 export const defaultSelectionState: SelectionState = {
   tool: 'rect-marquee',
-  mode: 'new',
+  mode: 'add',
   feather: 0,
   paths: [],
   inverted: false,

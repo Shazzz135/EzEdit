@@ -16,6 +16,7 @@ export interface SelectionOverlayProps {
   tool: SelectionToolType
   paths: Point[][]
   onCommitPath: (path: Point[]) => void
+  onDeselect?: () => void
 }
 
 export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
@@ -25,6 +26,7 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
   tool,
   paths,
   onCommitPath,
+  onDeselect,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [activePoints, setActivePoints] = useState<Point[]>([])
@@ -48,6 +50,13 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
   )
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.button === 2) {
+      e.preventDefault()
+      setActivePoints([])
+      setIsDrawing(false)
+      onDeselect?.()
+      return
+    }
     if (e.button !== 0) return
     const pt = getImageCoords(e)
 
@@ -187,6 +196,12 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onDoubleClick={handleDoubleClick}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        setActivePoints([])
+        setIsDrawing(false)
+        onDeselect?.()
+      }}
       style={{ width: `${imageWidth}px`, height: `${imageHeight}px` }}
       className="absolute inset-0 z-20 cursor-crosshair touch-none select-none"
     />

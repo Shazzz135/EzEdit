@@ -26,6 +26,7 @@ export const App: React.FC = () => {
   const [splitActive, setSplitActive] = useState(false)
   const [splitPosition, setSplitPosition] = useState(0.5)
   const [isHoldComparing, setIsHoldComparing] = useState(false)
+  const [selectionSubTab, setSelectionSubTab] = useState<'vector' | 'cutout'>('vector')
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
 
   const { quotaWarning, dismissQuotaWarning } = useDocumentPersistence()
@@ -151,21 +152,22 @@ export const App: React.FC = () => {
             isHoldComparing={activeCategory === 'filters' && isHoldComparing}
             onHoldCompareChange={setIsHoldComparing}
             onToggleSplit={() => setSplitActive((v) => !v)}
+            onRightClickDeselect={resetToolStates}
             rotateOverlay={activeDoc && activeCategory === 'orientation' && !crop.isCropActive ? (
               <RotateHandle rotationAngle={rotationAngle} onRotateChange={setRotationAngle} />
             ) : undefined}
-            selectionOverlay={activeDoc && activeCategory === 'selection' ? (scale) => (
+            selectionOverlay={activeDoc && activeCategory === 'selection' && selectionSubTab === 'vector' ? (scale) => (
               <SelectionOverlay
                 imageWidth={activeDoc.currentWidth} imageHeight={activeDoc.currentHeight} zoomScale={scale}
-                tool={selection.state.tool} paths={selection.state.paths} onCommitPath={selection.commitPath}
+                tool={selection.state.tool} paths={selection.state.paths} onCommitPath={selection.commitPath} onDeselect={selection.clearSelection}
               />
             ) : undefined}
-            isPrecisionToolActive={(activeCategory === 'orientation' && crop.isCropActive) || activeCategory === 'selection'}
+            isPrecisionToolActive={(activeCategory === 'orientation' && crop.isCropActive) || (activeCategory === 'selection' && selectionSubTab === 'vector')}
             cropOverlay={activeDoc && activeCategory === 'orientation' && crop.isCropActive && crop.cropRect ? (scale) => (
               <CropOverlay
                 imageWidth={activeDoc.currentWidth} imageHeight={activeDoc.currentHeight}
                 cropRect={crop.cropRect!} aspectRatio={crop.aspectRatio} zoomScale={scale}
-                onChange={crop.updateCrop} onDragStateChange={crop.setIsDragging}
+                onChange={crop.updateCrop} onDragStateChange={crop.setIsDragging} onCancel={crop.cancelCrop}
               />
             ) : undefined}
           />
@@ -176,6 +178,11 @@ export const App: React.FC = () => {
             onSelectCategory={(cat) => {
               setActiveCategory(cat)
               resetToolStates()
+            }}
+            selectionSubTab={selectionSubTab}
+            onSelectSubTab={(tab) => {
+              setSelectionSubTab(tab)
+              selection.clearSelection()
             }}
             activeDoc={activeDoc}
             onUpdateAdjustments={updateAdjustments}

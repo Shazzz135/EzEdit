@@ -38,7 +38,6 @@ const TOOLS: { id: SelectionToolType; label: string; icon: React.FC<{ className?
 ]
 
 const MODES: { id: SelectionMode; label: string; icon: React.FC<{ className?: string }> }[] = [
-  { id: 'new', label: 'New', icon: Square },
   { id: 'add', label: 'Add (+)', icon: Plus },
   { id: 'subtract', label: 'Subtract (-)', icon: Minus },
 ]
