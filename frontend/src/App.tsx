@@ -65,9 +65,9 @@ export const App: React.FC = () => {
     setIsHoldComparing(false)
   }, [crop, selection])
 
-  const [prevDocId, setPrevDocId] = useState(activeDocumentId)
-  if (prevDocId !== activeDocumentId) {
-    setPrevDocId(activeDocumentId)
+  const [prevTracked, setPrevTracked] = useState({ docId: activeDocumentId, cat: activeCategory })
+  if (prevTracked.docId !== activeDocumentId || prevTracked.cat !== activeCategory) {
+    setPrevTracked({ docId: activeDocumentId, cat: activeCategory })
     crop.cancelCrop()
     selection.clearSelection()
     setRotationAngle(0)

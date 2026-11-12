@@ -44,6 +44,7 @@ export function useCropState(): UseCropStateReturn {
     setIsCropActive(false)
     setCropRect(null)
     setIsDragging(false)
+    setAspectRatioState('free')
   }, [])
 
   return {
