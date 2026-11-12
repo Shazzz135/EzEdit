@@ -25,6 +25,7 @@ export interface DocumentStore {
   applyRasterTransform: (id: string, newImage: { url: string; blob: Blob; width: number; height: number }) => void
   resetDocumentCompletely: (id: string) => void
   transferEdits: (sourceId: string, targetIds: string[], categories: TransferEditCategories) => void
+  markDocumentExported: (id: string) => void
   undo: (id: string) => void
   redo: (id: string) => void
   setHydratedDocuments: (docs: DocumentState[], activeId: string | null) => void
@@ -179,6 +180,10 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     }))
   },
 
+  markDocumentExported: (id) => set((state) => ({
+    documents: state.documents.map((d) => d.id === id ? { ...d, isModified: false, updatedAt: Date.now() } : d),
+  })),
+
   undo: (id) => {
     set((state) => ({
       documents: state.documents.map((doc) => {
@@ -216,16 +221,11 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       const origSrc = doc.originalImageSrc || doc.history?.[0]?.imageSrc || doc.imageSrc
       const origBlob = doc.originalImageBlob || doc.history?.[0]?.imageBlob || doc.imageBlob
       return {
-        ...doc,
-        originalImageSrc: origSrc,
-        originalImageBlob: origBlob,
-        adjustments: { ...defaultAdjustments, ...doc.adjustments },
-        orientation: { ...defaultOrientation, ...doc.orientation },
-        filter: doc.filter ? { ...doc.filter } : { ...defaultFilterState },
-        resetVersion: doc.resetVersion ?? 0,
+        ...doc, originalImageSrc: origSrc, originalImageBlob: origBlob,
+        adjustments: { ...defaultAdjustments, ...doc.adjustments }, orientation: { ...defaultOrientation, ...doc.orientation },
+        filter: doc.filter ? { ...doc.filter } : { ...defaultFilterState }, resetVersion: doc.resetVersion ?? 0,
         history: doc.history?.length ? doc.history : [{
-          imageSrc: origSrc, imageBlob: origBlob,
-          width: doc.originalWidth || doc.currentWidth, height: doc.originalHeight || doc.currentHeight,
+          imageSrc: origSrc, imageBlob: origBlob, width: doc.originalWidth || doc.currentWidth, height: doc.originalHeight || doc.currentHeight,
           adjustments: { ...defaultAdjustments }, orientation: { ...defaultOrientation }, filter: { ...defaultFilterState },
         }],
         historyIndex: doc.historyIndex ?? 0,
