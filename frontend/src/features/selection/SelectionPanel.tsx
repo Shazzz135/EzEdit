@@ -55,7 +55,7 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
         <button
           type="button"
           onClick={onClearSelection}
-          title="Clear Selection (Esc / Ctrl+D / Right-Click)"
+          title="Clear Selection (Esc / Ctrl+Shift+D / Right-Click)"
           className="text-[11px] text-[#808096] hover:text-[#D0D0E0] flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw className="w-3 h-3 text-[#60A5FA]" />
@@ -157,7 +157,7 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
           className="flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-[#28283A] bg-[#161622]/40 hover:bg-[#1A1A28] text-xs text-[#808096] hover:text-[#D0D0E0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
           <X className="w-3.5 h-3.5 text-[#60A5FA]" />
-          <span>Deselect (Ctrl+D)</span>
+          <span>Deselect (Esc / Ctrl+Shift+D)</span>
         </button>
       </div>
     </div>

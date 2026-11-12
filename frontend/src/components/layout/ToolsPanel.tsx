@@ -5,6 +5,7 @@ import { AdjustmentsPanel } from '@/features/adjustments'
 import { FiltersPanel } from '@/features/filters'
 import { SelectionPanel, type SelectionPanelProps } from '@/features/selection'
 import { CutoutPanel, type CutoutPanelProps } from '@/features/cutout'
+import { RetouchPanel, type RetouchPanelProps } from '@/features/retouch'
 import { type CropPanelProps } from '@/features/crop/CropPanel'
 import { type DocumentState, type AdjustmentValues, type FilterState } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
@@ -51,6 +52,7 @@ export interface ToolsPanelProps {
   cutoutProps?: CutoutPanelProps
   selectionSubTab?: 'vector' | 'cutout'
   onSelectSelectionSubTab?: (subTab: 'vector' | 'cutout') => void
+  retouchProps?: RetouchPanelProps
 }
 
 export const ToolsPanel: React.FC<ToolsPanelProps> = ({
@@ -77,6 +79,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   cutoutProps,
   selectionSubTab = 'vector',
   onSelectSelectionSubTab,
+  retouchProps,
 }) => {
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
@@ -159,11 +162,14 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
           </div>
         )}
 
-        {activeDoc && activeCategory !== 'orientation' && activeCategory !== 'adjustments' && activeCategory !== 'filters' && activeCategory !== 'selection' && (
+        {activeDoc && activeCategory === 'retouch' && retouchProps && (
+          <RetouchPanel {...retouchProps} />
+        )}
+
+        {activeDoc && activeCategory !== 'orientation' && activeCategory !== 'adjustments' && activeCategory !== 'filters' && activeCategory !== 'selection' && activeCategory !== 'retouch' && (
           <div className="flex flex-col items-center justify-center p-6 text-center text-[#707080] text-xs">
             <span>
-              {TOOL_CATEGORIES.find((c) => c.id === activeCategory)?.label} tools will activate in Milestone{' '}
-              {activeCategory === 'retouch' ? 7 : 8}
+              {TOOL_CATEGORIES.find((c) => c.id === activeCategory)?.label} tools will activate in Milestone 8
             </span>
           </div>
         )}

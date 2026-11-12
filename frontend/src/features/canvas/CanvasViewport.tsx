@@ -13,6 +13,7 @@ export interface CanvasViewportProps {
   cropOverlay?: (scale: number) => React.ReactNode
   rotateOverlay?: React.ReactNode
   selectionOverlay?: (scale: number) => React.ReactNode
+  retouchOverlay?: (scale: number) => React.ReactNode
   isPrecisionToolActive?: boolean
   previewScale?: { x: number; y: number }
   rotationAngle?: number
@@ -27,7 +28,7 @@ export interface CanvasViewportProps {
 }
 
 export const CanvasViewport: React.FC<CanvasViewportProps> = ({
-  document: activeDoc, onDropImage, cropOverlay, rotateOverlay, selectionOverlay,
+  document: activeDoc, onDropImage, cropOverlay, rotateOverlay, selectionOverlay, retouchOverlay,
   isPrecisionToolActive: isPrecisionToolActiveProp, previewScale, rotationAngle,
   splitActive = false, splitPosition = 0.5, onChangeSplitPosition,
   isHoldComparing = false, onHoldCompareChange, onToggleSplit, onRightClickDeselect,
@@ -36,7 +37,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   const containerRef = useRef<HTMLDivElement>(null)
   const internalPanZoom = useCanvasPanZoom()
   const panZoom = panZoomProp ?? internalPanZoom
-  const isPrecisionToolActive = isPrecisionToolActiveProp ?? (!!cropOverlay || !!selectionOverlay)
+  const isPrecisionToolActive = isPrecisionToolActiveProp ?? (!!cropOverlay || !!selectionOverlay || !!retouchOverlay)
 
   const fitToScreen = panZoom.fitToScreen
   const docId = activeDoc?.id
@@ -199,6 +200,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         <div className={isGrabMode ? 'pointer-events-none' : ''}>
           {cropOverlay && cropOverlay(panZoom.scale)}
           {selectionOverlay && selectionOverlay(panZoom.scale)}
+          {retouchOverlay && retouchOverlay(panZoom.scale)}
         </div>
       </div>
 

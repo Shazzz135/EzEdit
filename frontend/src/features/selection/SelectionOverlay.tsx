@@ -47,7 +47,12 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isModifier = e.ctrlKey || e.metaKey
-      if (e.key === 'Escape' || (isModifier && (e.key === 'd' || e.key === 'D'))) {
+      if (
+        e.key === 'Escape' ||
+        (isModifier && e.shiftKey && (e.key === 'd' || e.key === 'D')) ||
+        (e.altKey && (e.key === 'd' || e.key === 'D')) ||
+        (isModifier && e.shiftKey && (e.key === 'a' || e.key === 'A'))
+      ) {
         setActivePoints([])
         setIsDrawing(false)
         onDeselect?.()
