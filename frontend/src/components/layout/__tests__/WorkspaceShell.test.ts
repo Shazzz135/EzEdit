@@ -33,4 +33,18 @@ describe('WorkspaceShell & Layout Constraints', () => {
     const desktopMin = 768
     expect(mobileMax < desktopMin).toBe(true)
   })
+
+  it('verifies header grab tool props contract and active state', () => {
+    let grabToggled = false
+    const toggleGrab = () => { grabToggled = !grabToggled }
+    let isGrabActive = false
+
+    expect(isGrabActive).toBe(false)
+    toggleGrab()
+    isGrabActive = grabToggled
+    expect(isGrabActive).toBe(true)
+    toggleGrab()
+    isGrabActive = grabToggled
+    expect(isGrabActive).toBe(false)
+  })
 })

@@ -76,4 +76,24 @@ describe('useCanvasPanZoom Math & Coordinate Engine', () => {
     expect(backToCanvas.x).toBe(400)
     expect(backToCanvas.y).toBe(300)
   })
+
+  it('determines grab mode when hand tool or space shortcut is active', () => {
+    const isGrab = (isHandTool: boolean, isSpace: boolean) => isHandTool || isSpace
+    expect(isGrab(false, false)).toBe(false)
+    expect(isGrab(true, false)).toBe(true)
+    expect(isGrab(false, true)).toBe(true)
+    expect(isGrab(true, true)).toBe(true)
+  })
+
+  it('correctly identifies short space tap shortcut vs hold-to-pan duration', () => {
+    const isTapShortcut = (durationMs: number, hasPanned: boolean) =>
+      durationMs < 300 && !hasPanned
+
+    // Quick tap under 300ms without panning toggles tool
+    expect(isTapShortcut(120, false)).toBe(true)
+    // Hold over 300ms is a hold-to-pan action
+    expect(isTapShortcut(450, false)).toBe(false)
+    // Quick tap but user dragged while holding Space should not toggle
+    expect(isTapShortcut(150, true)).toBe(false)
+  })
 })

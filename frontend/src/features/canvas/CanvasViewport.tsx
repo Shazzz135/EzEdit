@@ -23,6 +23,7 @@ export interface CanvasViewportProps {
   onHoldCompareChange?: (holding: boolean) => void
   onToggleSplit?: () => void
   onRightClickDeselect?: () => void
+  panZoom?: ReturnType<typeof useCanvasPanZoom>
 }
 
 export const CanvasViewport: React.FC<CanvasViewportProps> = ({
@@ -30,9 +31,11 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   isPrecisionToolActive: isPrecisionToolActiveProp, previewScale, rotationAngle,
   splitActive = false, splitPosition = 0.5, onChangeSplitPosition,
   isHoldComparing = false, onHoldCompareChange, onToggleSplit, onRightClickDeselect,
+  panZoom: panZoomProp,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const panZoom = useCanvasPanZoom()
+  const internalPanZoom = useCanvasPanZoom()
+  const panZoom = panZoomProp ?? internalPanZoom
   const isPrecisionToolActive = isPrecisionToolActiveProp ?? (!!cropOverlay || !!selectionOverlay)
 
   const fitToScreen = panZoom.fitToScreen
@@ -59,15 +62,30 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     return () => container.removeEventListener('wheel', onWheel)
   }, [panZoom])
 
-  // Keyboard spacebar (pan) and '\' or 'c' (hold to compare)
+  const spacePressTimeRef = useRef<number>(0)
+  const hasPannedWhileSpaceRef = useRef<boolean>(false)
+
+  // Keyboard spacebar (pan / grabber shortcut) and '\' or 'c' (hold to compare)
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
-      if (document.activeElement?.tagName === 'INPUT') return
-      if (e.code === 'Space' && !e.repeat) panZoom.setIsSpacePressed(true)
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault()
+        spacePressTimeRef.current = Date.now()
+        hasPannedWhileSpaceRef.current = false
+        panZoom.setIsSpacePressed(true)
+      }
       if ((e.key === '\\' || e.key.toLowerCase() === 'c') && !e.repeat) onHoldCompareChange?.(true)
     }
     const onUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') panZoom.setIsSpacePressed(false)
+      if (e.code === 'Space') {
+        e.preventDefault()
+        panZoom.setIsSpacePressed(false)
+        const duration = Date.now() - spacePressTimeRef.current
+        if (duration < 300 && !hasPannedWhileSpaceRef.current) {
+          panZoom.toggleHandTool()
+        }
+      }
       if (e.key === '\\' || e.key.toLowerCase() === 'c') onHoldCompareChange?.(false)
     }
     window.addEventListener('keydown', onDown)
@@ -85,7 +103,12 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     if (e.button === 0 || e.button === 1 || e.pointerType === 'touch') panZoom.startPan(e.clientX, e.clientY)
   }
 
-  const handlePointerMove = (e: React.PointerEvent) => { if (panZoom.isPanning) panZoom.updatePan(e.clientX, e.clientY) }
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (panZoom.isPanning) {
+      if (panZoom.isSpacePressed) hasPannedWhileSpaceRef.current = true
+      panZoom.updatePan(e.clientX, e.clientY)
+    }
+  }
   const handlePointerUp = () => { if (panZoom.isPanning) panZoom.endPan() }
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
   const handleDrop = (e: React.DragEvent) => {
@@ -173,67 +196,25 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         )}
 
         {rotateOverlay}
-        {cropOverlay && cropOverlay(panZoom.scale)}
-        {selectionOverlay && selectionOverlay(panZoom.scale)}
+        <div className={isGrabMode ? 'pointer-events-none' : ''}>
+          {cropOverlay && cropOverlay(panZoom.scale)}
+          {selectionOverlay && selectionOverlay(panZoom.scale)}
+        </div>
       </div>
 
       {/* Floating Viewport Controls (Bottom Left) */}
       <div className="hidden md:flex absolute bottom-3 left-3 z-30 items-center gap-1.5 px-2.5 py-1 bg-[#14141C]/90 backdrop-blur-xs border border-[#242432] rounded text-xs font-mono text-[#D0D0DC] shadow-lg">
-        <button type="button" onClick={panZoom.resetZoom} title="Reset to 100%" className="hover:text-[#60A5FA] cursor-pointer">
-          {zoomPercent}%
-        </button>
+        <button type="button" onClick={panZoom.resetZoom} title="Reset to 100%" className="hover:text-[#60A5FA] cursor-pointer">{zoomPercent}%</button>
         <div className="w-[1px] h-3 bg-[#2A2A38] mx-0.5" />
-        <button
-          type="button"
-          onClick={() => {
-            const rect = containerRef.current?.getBoundingClientRect()
-            if (rect) panZoom.fitToScreen(rect.width, rect.height, activeDoc.currentWidth, activeDoc.currentHeight)
-          }}
-          title="Fit to Screen"
-          className="p-1 hover:text-[#60A5FA] text-[#808094] cursor-pointer"
-        >
-          <Maximize2 className="w-3.5 h-3.5" />
-        </button>
-        <button type="button" onClick={panZoom.resetZoom} title="Reset View" className="p-1 hover:text-[#60A5FA] text-[#808094] cursor-pointer">
-          <RotateCcw className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={panZoom.toggleHandTool}
-          title="Hand Tool / Pan (Space)"
-          className={`p-1 transition-colors cursor-pointer rounded ${
-            panZoom.isHandToolActive || panZoom.isSpacePressed ? 'text-[#60A5FA] bg-[#222234]' : 'text-[#808094] hover:text-[#60A5FA]'
-          }`}
-        >
-          <Hand className="w-3.5 h-3.5" />
-        </button>
-
+        <button type="button" onClick={() => { const rect = containerRef.current?.getBoundingClientRect(); if (rect) panZoom.fitToScreen(rect.width, rect.height, activeDoc.currentWidth, activeDoc.currentHeight) }} title="Fit to Screen" className="p-1 hover:text-[#60A5FA] text-[#808094] cursor-pointer"><Maximize2 className="w-3.5 h-3.5" /></button>
+        <button type="button" onClick={panZoom.resetZoom} title="Reset View" className="p-1 hover:text-[#60A5FA] text-[#808094] cursor-pointer"><RotateCcw className="w-3.5 h-3.5" /></button>
+        <button type="button" onClick={panZoom.toggleHandTool} title="Hand Tool / Pan (Space)" className={`p-1 transition-colors cursor-pointer rounded ${panZoom.isHandToolActive || panZoom.isSpacePressed ? 'text-[#60A5FA] bg-[#222234]' : 'text-[#808094] hover:text-[#60A5FA]'}`}><Hand className="w-3.5 h-3.5" /></button>
         <div className="w-[1px] h-3 bg-[#2A2A38] mx-0.5" />
-
-        {/* Split Compare Button */}
         {onToggleSplit && (
-          <button
-            type="button"
-            onClick={onToggleSplit}
-            title={splitActive ? 'Disable Split Compare' : 'Enable Split Compare'}
-            className={`p-1 transition-colors cursor-pointer ${splitActive ? 'text-[#60A5FA]' : 'text-[#808094] hover:text-[#60A5FA]'}`}
-          >
-            <Columns className="w-3.5 h-3.5" />
-          </button>
+          <button type="button" onClick={onToggleSplit} title={splitActive ? 'Disable Split Compare' : 'Enable Split Compare'} className={`p-1 transition-colors cursor-pointer ${splitActive ? 'text-[#60A5FA]' : 'text-[#808094] hover:text-[#60A5FA]'}`}><Columns className="w-3.5 h-3.5" /></button>
         )}
-
-        {/* Hold to Compare Button */}
         {onHoldCompareChange && (
-          <button
-            type="button"
-            onPointerDown={() => onHoldCompareChange(true)}
-            onPointerUp={() => onHoldCompareChange(false)}
-            onPointerLeave={() => onHoldCompareChange(false)}
-            title="Hold to Compare Original (Hotkey: \ or C)"
-            className={`p-1 transition-colors cursor-pointer touch-none ${isHoldComparing ? 'text-[#60A5FA]' : 'text-[#808094] hover:text-[#60A5FA]'}`}
-          >
-            <Eye className="w-3.5 h-3.5" />
-          </button>
+          <button type="button" onPointerDown={() => onHoldCompareChange(true)} onPointerUp={() => onHoldCompareChange(false)} onPointerLeave={() => onHoldCompareChange(false)} title="Hold to Compare Original (Hotkey: \ or C)" className={`p-1 transition-colors cursor-pointer touch-none ${isHoldComparing ? 'text-[#60A5FA]' : 'text-[#808094] hover:text-[#60A5FA]'}`}><Eye className="w-3.5 h-3.5" /></button>
         )}
       </div>
     </div>
