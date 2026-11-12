@@ -163,7 +163,7 @@ export const App: React.FC = () => {
               <RetouchOverlay
                 imageSrc={activeDoc.imageSrc} imageWidth={activeDoc.currentWidth} imageHeight={activeDoc.currentHeight} zoomScale={scale}
                 tool={retouch.tool} settings={retouch.settings} sourcePoint={retouch.sourcePoint} isAltPressed={retouch.isAltPressed}
-                onSetSourcePoint={retouch.setSourcePoint} onCommitTransform={handleApplyTransform} onDeselectSource={retouch.clearSourcePoint}
+                onSetSourcePoint={retouch.setSourcePoint} onCommitTransform={handleApplyTransform}
               />
             ) : undefined}
           />
