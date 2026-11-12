@@ -6,12 +6,13 @@ import { FiltersPanel } from '@/features/filters'
 import { SelectionPanel, type SelectionPanelProps } from '@/features/selection'
 import { CutoutPanel, type CutoutPanelProps } from '@/features/cutout'
 import { RetouchPanel, type RetouchPanelProps } from '@/features/retouch'
+import { AnnotatePanel, type AnnotatePanelProps } from '@/features/annotate'
 import { AIPanel, AIPreviewModal, usePollinationsState } from '@/features/ai'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { type CropPanelProps } from '@/features/crop/CropPanel'
 import { type DocumentState, type AdjustmentValues, type FilterState } from '@/types/document'
 import { type TransformResult } from '@/types/transform'
-import { Crop, Sliders, Wand2, Brush, Scissors, Sparkles } from 'lucide-react'
+import { Crop, Sliders, Wand2, Brush, Scissors, PenTool, Sparkles } from 'lucide-react'
 
 export type ToolCategory =
   | 'orientation'
@@ -19,6 +20,7 @@ export type ToolCategory =
   | 'filters'
   | 'selection'
   | 'retouch'
+  | 'annotate'
   | 'ai'
 
 const TOOL_CATEGORIES = [
@@ -27,6 +29,7 @@ const TOOL_CATEGORIES = [
   { id: 'filters', label: 'Preset Filters', icon: Wand2 },
   { id: 'selection', label: 'Precise Selection', icon: Scissors },
   { id: 'retouch', label: 'Advanced Retouching', icon: Brush },
+  { id: 'annotate', label: 'Shapes/Paint/Text', icon: PenTool },
   { id: 'ai', label: 'AI Tools (Pollinations.ai)', icon: Sparkles },
 ] as const
 
@@ -55,6 +58,7 @@ export interface ToolsPanelProps {
   selectionSubTab?: 'vector' | 'cutout'
   onSelectSelectionSubTab?: (subTab: 'vector' | 'cutout') => void
   retouchProps?: RetouchPanelProps
+  annotateProps?: AnnotatePanelProps
   onTabLimitExceeded?: () => void
 }
 
@@ -65,7 +69,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   splitActive = false, onToggleSplit = () => {}, splitPosition = 0.5, onChangeSplitPosition = () => {},
   isHoldComparing = false, onHoldCompareStart = () => {}, onHoldCompareEnd = () => {},
   selectionProps, cutoutProps, selectionSubTab = 'vector', onSelectSelectionSubTab,
-  retouchProps, onTabLimitExceeded,
+  retouchProps, annotateProps, onTabLimitExceeded,
 }) => {
   const ai = usePollinationsState()
   const addDocument = useDocumentStore((s) => s.addDocument)
@@ -178,6 +182,10 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
 
         {activeDoc && activeCategory === 'retouch' && retouchProps && (
           <RetouchPanel key={activeDoc.id} {...retouchProps} />
+        )}
+
+        {activeDoc && activeCategory === 'annotate' && annotateProps && (
+          <AnnotatePanel key={activeDoc.id} {...annotateProps} />
         )}
 
         {activeCategory === 'ai' && (

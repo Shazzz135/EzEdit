@@ -9,6 +9,7 @@ export const VALID_CATEGORIES: ToolCategory[] = [
   'filters',
   'selection',
   'retouch',
+  'annotate',
   'ai',
 ]
 

@@ -187,3 +187,36 @@ export function triggerBrowserDownload(blob: Blob, filename: string): void {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 }
+
+/**
+ * Batch exports all provided documents sequentially, triggering browser downloads
+ * for each with its sanitized document name and returning the exported document IDs.
+ */
+export async function exportAllDocuments(
+  docs: DocumentState[],
+  format: ExportFormat,
+  qualityPercent: number,
+  onProgress?: (current: number, total: number) => void
+): Promise<string[]> {
+  const exportedIds: string[] = []
+  const usedNames = new Map<string, number>()
+
+  for (let i = 0; i < docs.length; i++) {
+    const doc = docs[i]
+    onProgress?.(i + 1, docs.length)
+    const base = sanitizeExportBaseName(doc.name)
+    const count = usedNames.get(base) ?? 0
+    usedNames.set(base, count + 1)
+    const uniqueBase = count === 0 ? base : `${base}-${count + 1}`
+
+    const res = await renderExportBlob(doc, {
+      filename: uniqueBase,
+      format,
+      qualityPercent,
+    })
+    triggerBrowserDownload(res.blob, res.filename)
+    exportedIds.push(doc.id)
+  }
+
+  return exportedIds
+}

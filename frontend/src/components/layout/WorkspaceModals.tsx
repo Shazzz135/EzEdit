@@ -6,7 +6,7 @@ import { MAX_TAB_LIMIT, MAX_IMPORT_DIMENSION, type DocumentState } from '@/types
 import { type StorageQuotaEstimate } from '@/services/storage'
 import { TransferEditsModal } from './TransferEditsModal'
 import { type TransferEditCategories } from '@/features/tabs/useDocumentStore'
-import { ExportModal } from '@/features/export'
+import { ExportModal, ExportAllModal } from '@/features/export'
 
 export interface WorkspaceModalsProps {
   tabLimitModalOpen: boolean
@@ -23,7 +23,10 @@ export interface WorkspaceModalsProps {
   onCloseTransferModal?: () => void
   exportModalOpen?: boolean
   onCloseExportModal?: () => void
+  exportAllModalOpen?: boolean
+  onCloseExportAllModal?: () => void
   onExportSuccess?: (docId: string) => void
+  onExportAllSuccess?: (docIds: string[]) => void
   activeDoc?: DocumentState
   documents?: DocumentState[]
   onTransferEdits?: (
@@ -48,7 +51,10 @@ export const WorkspaceModals: React.FC<WorkspaceModalsProps> = ({
   onCloseTransferModal = () => {},
   exportModalOpen = false,
   onCloseExportModal = () => {},
+  exportAllModalOpen = false,
+  onCloseExportAllModal = () => {},
   onExportSuccess,
+  onExportAllSuccess,
   activeDoc,
   documents = [],
   onTransferEdits = () => {},
@@ -60,6 +66,12 @@ export const WorkspaceModals: React.FC<WorkspaceModalsProps> = ({
         document={activeDoc}
         onClose={onCloseExportModal}
         onExportSuccess={onExportSuccess}
+      />
+      <ExportAllModal
+        isOpen={exportAllModalOpen}
+        documents={documents}
+        onClose={onCloseExportAllModal}
+        onExportAllSuccess={onExportAllSuccess}
       />
       <TransferEditsModal
         isOpen={transferModalOpen}

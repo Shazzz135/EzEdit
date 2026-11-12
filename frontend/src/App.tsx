@@ -11,6 +11,7 @@ import { RotateHandle } from '@/features/orientation'
 import { useSelectionState, SelectionOverlay, copySelection, cutSelection } from '@/features/selection'
 import { useBackgroundRemoval } from '@/features/cutout'
 import { useRetouchState, RetouchOverlay } from '@/features/retouch'
+import { useAnnotateState, AnnotateOverlay } from '@/features/annotate'
 import { useImageImport } from '@/features/canvas/useImageImport'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { useDocumentPersistence } from '@/features/tabs/useDocumentPersistence'
@@ -24,6 +25,7 @@ export const App: React.FC = () => {
   const [tabLimitModalOpen, setTabLimitModalOpen] = useState(false)
   const [transferModalOpen, setTransferModalOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [exportAllModalOpen, setExportAllModalOpen] = useState(false)
   const [unsavedDoc, setUnsavedDoc] = useState<{ id: string; name: string } | null>(null)
   const [previewScale, setPreviewScale] = useState<{ x: number; y: number } | undefined>(undefined)
   const [splitActive, setSplitActive] = useState(false)
@@ -43,6 +45,7 @@ export const App: React.FC = () => {
   const crop = useCropState()
   const selection = useSelectionState(activeCategory === 'selection' && selectionSubTab === 'vector', { onCopy: () => handleCopySelection(), onCut: () => handleCutSelection() })
   const retouch = useRetouchState({ isActive: activeCategory === 'retouch' })
+  const annotate = useAnnotateState()
   const { oversizedFile, setOversizedFile, handleDropFile, handleDownscaleAndImport } =
     useImageImport(() => setTabLimitModalOpen(true))
 
@@ -54,50 +57,50 @@ export const App: React.FC = () => {
   const cutout = useBackgroundRemoval(activeDoc, handleApplyTransform, selection.clearSelection)
 
   const resetToolStates = useCallback(() => {
-    crop.cancelCrop(); selection.clearSelection(); retouch.resetRetouch();
+    crop.cancelCrop(); selection.clearSelection(); retouch.resetRetouch(); annotate.resetAnnotate();
     setPreviewScale(undefined); setSplitActive(false); setIsHoldComparing(false);
-  }, [crop, selection, retouch])
+  }, [crop, selection, retouch, annotate])
 
   const [prevTracked, setPrevTracked] = useState({ docId: activeDocumentId, cat: activeCategory })
   if (prevTracked.docId !== activeDocumentId || prevTracked.cat !== activeCategory) {
     setPrevTracked({ docId: activeDocumentId, cat: activeCategory })
-    crop.cancelCrop(); selection.clearSelection(); retouch.resetRetouch();
+    crop.cancelCrop(); selection.clearSelection(); retouch.resetRetouch(); annotate.resetAnnotate();
     setPreviewScale(undefined); setSplitActive(false); setIsHoldComparing(false);
   }
 
   const handleSelectSelectionSubTab = useCallback((subTab: 'vector' | 'cutout') => {
-    setSelectionSubTab(subTab)
-    selection.clearSelection()
+    setSelectionSubTab(subTab); selection.clearSelection()
   }, [selection])
 
-  useUndoRedoShortcuts(activeDoc, undo, redo)
+  useUndoRedoShortcuts(
+    activeDoc, undo, redo,
+    activeCategory === 'annotate' && (annotate.items.length > 0 || annotate.undoneItems.length > 0)
+      ? { canUndo: annotate.items.length > 0, canRedo: annotate.undoneItems.length > 0, onUndo: annotate.undoLastItem, onRedo: annotate.redoLastItem }
+      : undefined
+  )
 
   const handleApplyCrop = async () => {
     if (!activeDoc || !crop.cropRect) return
     try {
       const res = await executeCrop(activeDoc.imageSrc, crop.cropRect)
-      handleApplyTransform(res)
-      crop.cancelCrop()
+      handleApplyTransform(res); crop.cancelCrop()
     } catch (e) { console.error('Failed to apply crop:', e) }
   }
 
   const handleCopySelection = async () => {
-    if (activeDoc && selection.state.hasSelection) {
-      await copySelection(activeDoc.imageSrc, selection.state.paths, selection.state.inverted, selection.state.feather)
-    }
+    if (activeDoc && selection.state.hasSelection) await copySelection(activeDoc.imageSrc, selection.state.paths, selection.state.inverted, selection.state.feather)
   }
 
   const handleCutSelection = async () => {
     if (!activeDoc || !selection.state.hasSelection) return
     const cutRes = await cutSelection(activeDoc.imageSrc, selection.state.paths, selection.state.inverted, selection.state.feather)
-    if (cutRes) {
-      handleApplyTransform({ url: cutRes.newImageUrl, blob: cutRes.newImageBlob, width: cutRes.width, height: cutRes.height })
-      selection.clearSelection()
-    }
+    if (cutRes) { handleApplyTransform({ url: cutRes.newImageUrl, blob: cutRes.newImageBlob, width: cutRes.width, height: cutRes.height }); selection.clearSelection() }
   }
 
-  const canUndo = !!(activeDoc && activeDoc.historyIndex > 0)
-  const canRedo = !!(activeDoc && activeDoc.history && activeDoc.historyIndex < activeDoc.history.length - 1)
+  const isAnnotateActive = activeCategory === 'annotate' && (annotate.items.length > 0 || annotate.undoneItems.length > 0)
+  const canUndo = isAnnotateActive ? annotate.items.length > 0 : !!(activeDoc && activeDoc.historyIndex > 0)
+  const canRedo = isAnnotateActive ? annotate.undoneItems.length > 0 : !!(activeDoc && activeDoc.history && activeDoc.historyIndex < activeDoc.history.length - 1)
+  const hasMultipleTabs = documents.length >= 2
   const mobileSelector = (
     <MobileDocumentSelector
       documents={documents} activeDocumentId={activeDocumentId} onSelectDocument={setActiveDocument}
@@ -114,36 +117,25 @@ export const App: React.FC = () => {
       />
       <WorkspaceShell
         headerProps={{
-          onUndo: canUndo ? () => undo(activeDoc!.id) : undefined,
-          onRedo: canRedo ? () => redo(activeDoc!.id) : undefined,
+          onUndo: canUndo ? (isAnnotateActive ? annotate.undoLastItem : () => undo(activeDoc!.id)) : undefined,
+          onRedo: canRedo ? (isAnnotateActive ? annotate.redoLastItem : () => redo(activeDoc!.id)) : undefined,
           onMassReset: activeDoc ? () => { resetToolStates(); resetDocumentCompletely(activeDoc.id); } : undefined,
-          onOpenTransferEdits: activeDoc && documents.length > 1 ? () => setTransferModalOpen(true) : undefined,
-          onZoomIn: panZoom.zoomIn,
-          onZoomOut: panZoom.zoomOut,
-          isGrabActive: panZoom.isHandToolActive || panZoom.isSpacePressed,
-          onToggleGrab: panZoom.toggleHandTool,
+          onOpenTransferEdits: activeDoc && hasMultipleTabs ? () => setTransferModalOpen(true) : undefined,
+          onZoomIn: panZoom.zoomIn, onZoomOut: panZoom.zoomOut,
+          isGrabActive: panZoom.isHandToolActive || panZoom.isSpacePressed, onToggleGrab: panZoom.toggleHandTool,
           onExport: activeDoc ? () => setExportModalOpen(true) : undefined,
+          onExportAll: hasMultipleTabs ? () => setExportAllModalOpen(true) : undefined,
           onOpenAI: () => { setActiveCategory('ai'); resetToolStates(); },
-          canUndo, canRedo, canMassReset: !!activeDoc, canTransferEdits: !!activeDoc && documents.length > 1, mobileSelector,
+          canUndo, canRedo, canMassReset: !!activeDoc, canTransferEdits: !!activeDoc && hasMultipleTabs, canExportAll: hasMultipleTabs, mobileSelector,
         }}
         canvasContent={
           <CanvasViewport
-            document={activeDoc}
-            panZoom={panZoom}
-            onDropImage={handleDropFile}
-            previewScale={previewScale}
-            splitActive={activeCategory === 'filters' && splitActive}
-            splitPosition={splitPosition}
-            onChangeSplitPosition={setSplitPosition}
-            isHoldComparing={activeCategory === 'filters' && isHoldComparing}
-            onHoldCompareChange={setIsHoldComparing}
-            onToggleSplit={() => setSplitActive((v) => !v)}
-            onRightClickDeselect={resetToolStates}
+            document={activeDoc} panZoom={panZoom} onDropImage={handleDropFile} previewScale={previewScale}
+            splitActive={activeCategory === 'filters' && splitActive} splitPosition={splitPosition} onChangeSplitPosition={setSplitPosition}
+            isHoldComparing={activeCategory === 'filters' && isHoldComparing} onHoldCompareChange={setIsHoldComparing}
+            onToggleSplit={() => setSplitActive((v) => !v)} onRightClickDeselect={resetToolStates}
             rotateOverlay={activeDoc && activeCategory === 'orientation' && !crop.isCropActive ? (
-              <RotateHandle
-                rotationAngle={activeDoc.orientation?.rotation ?? 0}
-                onRotateChange={(a) => updateOrientation(activeDoc.id, { rotation: a })}
-              />
+              <RotateHandle rotationAngle={activeDoc.orientation?.rotation ?? 0} onRotateChange={(a) => updateOrientation(activeDoc.id, { rotation: a })} />
             ) : undefined}
             selectionOverlay={activeDoc && activeCategory === 'selection' && selectionSubTab === 'vector' ? (scale) => (
               <SelectionOverlay
@@ -151,7 +143,7 @@ export const App: React.FC = () => {
                 tool={selection.state.tool} paths={selection.state.paths} onCommitPath={selection.commitPath} onDeselect={selection.clearSelection}
               />
             ) : undefined}
-            isPrecisionToolActive={(activeCategory === 'orientation' && crop.isCropActive) || (activeCategory === 'selection' && selectionSubTab === 'vector') || (activeCategory === 'retouch')}
+            isPrecisionToolActive={(activeCategory === 'orientation' && crop.isCropActive) || (activeCategory === 'selection' && selectionSubTab === 'vector') || (activeCategory === 'retouch') || (activeCategory === 'annotate')}
             cropOverlay={activeDoc && activeCategory === 'orientation' && crop.isCropActive && crop.cropRect ? (scale) => (
               <CropOverlay
                 imageWidth={activeDoc.currentWidth} imageHeight={activeDoc.currentHeight}
@@ -167,26 +159,23 @@ export const App: React.FC = () => {
                 onSetSourcePoint={retouch.setSourcePoint} onCommitTransform={handleApplyTransform}
               />
             ) : undefined}
+            annotateOverlay={activeDoc && activeCategory === 'annotate' ? (scale) => (
+              <AnnotateOverlay
+                imageWidth={activeDoc.currentWidth} imageHeight={activeDoc.currentHeight} zoomScale={scale}
+                settings={annotate.settings} items={annotate.items} onAddItem={annotate.addItem}
+              />
+            ) : undefined}
           />
         }
         toolsContent={
           <ToolsPanel
-            activeCategory={activeCategory}
-            onSelectCategory={(cat) => {
-              setActiveCategory(cat)
-              resetToolStates()
-            }}
-            selectionSubTab={selectionSubTab}
-            onSelectSelectionSubTab={handleSelectSelectionSubTab}
-            activeDoc={activeDoc}
-            onUpdateAdjustments={updateAdjustments}
-            onResetAdjustments={resetAdjustments}
-            onUpdateFilter={updateFilter}
-            onResetFilter={resetFilter}
+            activeCategory={activeCategory} onSelectCategory={(cat) => { setActiveCategory(cat); resetToolStates(); }}
+            selectionSubTab={selectionSubTab} onSelectSelectionSubTab={handleSelectSelectionSubTab}
+            activeDoc={activeDoc} onUpdateAdjustments={updateAdjustments} onResetAdjustments={resetAdjustments}
+            onUpdateFilter={updateFilter} onResetFilter={resetFilter}
             splitActive={splitActive} onToggleSplit={() => setSplitActive((v) => !v)}
             splitPosition={splitPosition} onChangeSplitPosition={setSplitPosition}
-            isHoldComparing={isHoldComparing}
-            onHoldCompareStart={() => setIsHoldComparing(true)} onHoldCompareEnd={() => setIsHoldComparing(false)}
+            isHoldComparing={isHoldComparing} onHoldCompareStart={() => setIsHoldComparing(true)} onHoldCompareEnd={() => setIsHoldComparing(false)}
             onApplyTransform={handleApplyTransform} onPreviewScaleChange={setPreviewScale}
             retouchProps={{
               tool: retouch.tool, settings: retouch.settings, sourcePoint: retouch.sourcePoint,
@@ -197,6 +186,11 @@ export const App: React.FC = () => {
               onChangeInpaintMethod: retouch.setInpaintMethod, onChangeInpaintPrompt: retouch.setInpaintPrompt,
               onClearSourcePoint: retouch.clearSourcePoint, onClearMask: retouch.clearMaskPaths,
               onExecuteInpaint: () => retouch.handleExecuteInpaint(activeDoc, handleApplyTransform, selection.state.paths),
+            }}
+            annotateProps={{
+              settings: annotate.settings, itemCount: annotate.items.length, redoCount: annotate.undoneItems.length, isBaking: annotate.isBaking,
+              onUpdateSettings: annotate.updateSettings, onUndoLast: annotate.undoLastItem, onRedoLast: annotate.redoLastItem,
+              onClearAll: annotate.clearItems, onApplyToImage: () => annotate.applyAnnotations(activeDoc, handleApplyTransform),
             }}
             selectionProps={{
               state: selection.state, onSelectTool: selection.setTool,
@@ -236,7 +230,9 @@ export const App: React.FC = () => {
         quotaWarning={quotaWarning} onDismissQuotaWarning={dismissQuotaWarning}
         transferModalOpen={transferModalOpen} onCloseTransferModal={() => setTransferModalOpen(false)}
         exportModalOpen={exportModalOpen} onCloseExportModal={() => setExportModalOpen(false)}
+        exportAllModalOpen={exportAllModalOpen} onCloseExportAllModal={() => setExportAllModalOpen(false)}
         onExportSuccess={markDocumentExported}
+        onExportAllSuccess={(ids) => ids.forEach((id) => markDocumentExported(id))}
         activeDoc={activeDoc} documents={documents}
         onTransferEdits={(srcId, targetIds, cats) => {
           transferEdits(srcId, targetIds, cats)
