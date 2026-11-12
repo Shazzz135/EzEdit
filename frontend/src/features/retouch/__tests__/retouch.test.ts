@@ -5,7 +5,6 @@ import {
   blendHealingBuffer,
   blendSpotHealingBuffer,
 } from '../retouchMath'
-import { runInpaintingMath } from '../inpaintingMath'
 import { executePollinationsInpainting } from '../pollinationsInpaint'
 
 describe('Retouching Math & Algorithms', () => {
@@ -107,100 +106,12 @@ describe('Retouching Math & Algorithms', () => {
     })
   })
 
-  describe('runInpaintingMath (Fast Marching Content-Aware Fill)', () => {
-    it('fills hole using surrounding boundary colors', () => {
-      const width = 10
-      const height = 10
-      const img = new Uint8ClampedArray(width * height * 4)
-      const mask = new Uint8ClampedArray(width * height)
-
-      // Green grass image: #34D399 (52, 211, 153)
-      for (let i = 0; i < width * height; i++) {
-        img[i * 4] = 52
-        img[i * 4 + 1] = 211
-        img[i * 4 + 2] = 153
-        img[i * 4 + 3] = 255
-      }
-
-      // Unwanted object in center 2x2 square: (4,4) to (5,5)
-      for (let y = 4; y <= 5; y++) {
-        for (let x = 4; x <= 5; x++) {
-          const idx = y * width + x
-          img[idx * 4] = 255 // bright white intruder
-          img[idx * 4 + 1] = 255
-          img[idx * 4 + 2] = 255
-          mask[idx] = 255 // masked
-        }
-      }
-
-      let progressCalled = false
-      const result = runInpaintingMath(img, mask, width, height, (p) => {
-        if (p > 0) progressCalled = true
-      })
-
-      expect(progressCalled).toBe(true)
-      // Central pixels should now be inpainted green like surrounding grass
-      const centerIdx = (4 * width + 4) * 4
-      expect(result[centerIdx]).toBeLessThan(100)
-      expect(result[centerIdx + 1]).toBeGreaterThan(180)
-      expect(result[centerIdx + 2]).toBeGreaterThan(120)
-    })
-
-    it('returns copy of image unchanged when mask has no holes', () => {
-      const width = 4
-      const height = 4
-      const img = new Uint8ClampedArray(width * height * 4).fill(128)
-      const mask = new Uint8ClampedArray(width * height).fill(0)
-
-      const result = runInpaintingMath(img, mask, width, height)
-      expect(result).toEqual(img)
-    })
-
-    it('dilates mask to absorb object edge fringe and synthesizes clean background on larger images', () => {
-      const width = 48
-      const height = 48
-      const img = new Uint8ClampedArray(width * height * 4)
-      const mask = new Uint8ClampedArray(width * height * 4)
-
-      for (let i = 0; i < width * height; i++) {
-        img[i * 4] = 40
-        img[i * 4 + 1] = 180
-        img[i * 4 + 2] = 220
-        img[i * 4 + 3] = 255
-      }
-
-      // Red unwanted object from (18,18) to (30,30), but user mask only covers (19,19) to (29,29)
-      for (let y = 18; y <= 30; y++) {
-        for (let x = 18; x <= 30; x++) {
-          const idx = (y * width + x) * 4
-          img[idx] = 250
-          img[idx + 1] = 10
-          img[idx + 2] = 10
-        }
-      }
-      for (let y = 19; y <= 29; y++) {
-        for (let x = 19; x <= 29; x++) {
-          const idx = (y * width + x) * 4
-          mask[idx] = 255
-          mask[idx + 3] = 255
-        }
-      }
-
-      const result = runInpaintingMath(img, mask, width, height)
-      const centerIdx = (24 * width + 24) * 4
-      expect(result[centerIdx]).toBeLessThan(80)
-      expect(result[centerIdx + 1]).toBeGreaterThan(150)
-      expect(result[centerIdx + 2]).toBeGreaterThan(190)
-    })
-  })
-
   describe('executePollinationsInpainting', () => {
     it('gracefully handles offline or network timeout without crashing', async () => {
       const res = await executePollinationsInpainting('data:image/png;base64,invalid', {
         width: 100,
         height: 100,
       })
-      // In node test environment without browser network fetch, returns null gracefully
       expect(res === null || res instanceof Blob).toBe(true)
     })
   })

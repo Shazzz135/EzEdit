@@ -20,7 +20,7 @@ export const useRetouchState = (options: UseRetouchStateOptions) => {
     radius: 24,
     hardness: 0.5,
     opacity: 1.0,
-    inpaintMethod: 'local-patch',
+    inpaintMethod: 'pollinations-ai',
     inpaintPrompt: '',
   })
 
@@ -130,7 +130,6 @@ export const useRetouchState = (options: UseRetouchStateOptions) => {
           activeDoc.currentWidth,
           activeDoc.currentHeight,
           {
-            method: settings.inpaintMethod,
             prompt: settings.inpaintPrompt,
             brushRadius: settings.radius,
             maskStrokes: paintedMaskStrokes,
@@ -147,7 +146,7 @@ export const useRetouchState = (options: UseRetouchStateOptions) => {
         setInpaintProgress(0)
       }
     },
-    [paintedMaskStrokes, settings.inpaintMethod, settings.inpaintPrompt, settings.radius]
+    [paintedMaskStrokes, settings.inpaintPrompt, settings.radius]
   )
 
   const clearSourcePoint = useCallback(() => setSourcePoint(null), [])
