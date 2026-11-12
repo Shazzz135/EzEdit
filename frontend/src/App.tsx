@@ -32,18 +32,9 @@ export const App: React.FC = () => {
 
   const { quotaWarning, dismissQuotaWarning } = useDocumentPersistence()
   const {
-    documents,
-    activeDocumentId,
-    setActiveDocument,
-    getActiveDocument,
-    updateAdjustments,
-    resetAdjustments,
-    updateFilter,
-    resetFilter,
-    closeDocument,
-    applyRasterTransform,
-    undo,
-    redo,
+    documents, activeDocumentId, setActiveDocument, getActiveDocument,
+    updateAdjustments, resetAdjustments, updateFilter, resetFilter,
+    closeDocument, applyRasterTransform, undo, redo,
   } = useDocumentStore()
   const activeDoc = getActiveDocument()
   const panZoom = useCanvasPanZoom()
@@ -233,16 +224,12 @@ export const App: React.FC = () => {
       />
 
       <WorkspaceModals
-        tabLimitModalOpen={tabLimitModalOpen}
-        onCloseTabLimitModal={() => setTabLimitModalOpen(false)}
-        oversizedFile={oversizedFile}
-        onCloseOversizedModal={() => setOversizedFile(null)}
-        onDownscaleAndImport={handleDownscaleAndImport}
-        unsavedDoc={unsavedDoc}
+        tabLimitModalOpen={tabLimitModalOpen} onCloseTabLimitModal={() => setTabLimitModalOpen(false)}
+        oversizedFile={oversizedFile} onCloseOversizedModal={() => setOversizedFile(null)}
+        onDownscaleAndImport={handleDownscaleAndImport} unsavedDoc={unsavedDoc}
         onKeepUnsavedDoc={() => setUnsavedDoc(null)}
         onDiscardUnsavedDoc={() => { if (unsavedDoc) closeDocument(unsavedDoc.id); setUnsavedDoc(null) }}
-        quotaWarning={quotaWarning}
-        onDismissQuotaWarning={dismissQuotaWarning}
+        quotaWarning={quotaWarning} onDismissQuotaWarning={dismissQuotaWarning}
       />
     </>
   )
