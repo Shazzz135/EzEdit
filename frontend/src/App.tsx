@@ -10,6 +10,7 @@ import { useCropState, CropOverlay, executeCrop } from '@/features/crop'
 import { RotateHandle } from '@/features/orientation'
 import { useSelectionState, SelectionOverlay, copySelection, cutSelection } from '@/features/selection'
 import { useBackgroundRemoval } from '@/features/cutout'
+import { useRetouchState, RetouchOverlay } from '@/features/retouch'
 import { useImageImport } from '@/features/canvas/useImageImport'
 import { useDocumentStore } from '@/features/tabs/useDocumentStore'
 import { useDocumentPersistence } from '@/features/tabs/useDocumentPersistence'
@@ -40,6 +41,7 @@ export const App: React.FC = () => {
   const panZoom = useCanvasPanZoom()
   const crop = useCropState()
   const selection = useSelectionState(activeCategory === 'selection' && selectionSubTab === 'vector', { onCopy: () => handleCopySelection(), onCut: () => handleCutSelection() })
+  const retouch = useRetouchState({ isActive: activeCategory === 'retouch' })
   const { oversizedFile, setOversizedFile, handleDropFile, handleDownscaleAndImport } =
     useImageImport(() => setTabLimitModalOpen(true))
 
@@ -51,23 +53,15 @@ export const App: React.FC = () => {
   const cutout = useBackgroundRemoval(activeDoc, handleApplyTransform, selection.clearSelection)
 
   const resetToolStates = useCallback(() => {
-    crop.cancelCrop()
-    selection.clearSelection()
-    setRotationAngle(0)
-    setPreviewScale(undefined)
-    setSplitActive(false)
-    setIsHoldComparing(false)
-  }, [crop, selection])
+    crop.cancelCrop(); selection.clearSelection(); retouch.resetRetouch();
+    setRotationAngle(0); setPreviewScale(undefined); setSplitActive(false); setIsHoldComparing(false);
+  }, [crop, selection, retouch])
 
   const [prevTracked, setPrevTracked] = useState({ docId: activeDocumentId, cat: activeCategory })
   if (prevTracked.docId !== activeDocumentId || prevTracked.cat !== activeCategory) {
     setPrevTracked({ docId: activeDocumentId, cat: activeCategory })
-    crop.cancelCrop()
-    selection.clearSelection()
-    setRotationAngle(0)
-    setPreviewScale(undefined)
-    setSplitActive(false)
-    setIsHoldComparing(false)
+    crop.cancelCrop(); selection.clearSelection(); retouch.resetRetouch();
+    setRotationAngle(0); setPreviewScale(undefined); setSplitActive(false); setIsHoldComparing(false);
   }
 
   const handleSelectSelectionSubTab = useCallback((subTab: 'vector' | 'cutout') => {
@@ -103,19 +97,11 @@ export const App: React.FC = () => {
 
   const canUndo = !!(activeDoc && activeDoc.historyIndex > 0)
   const canRedo = !!(activeDoc && activeDoc.history && activeDoc.historyIndex < activeDoc.history.length - 1)
-
   const mobileSelector = (
     <MobileDocumentSelector
       documents={documents} activeDocumentId={activeDocumentId} onSelectDocument={setActiveDocument}
-      onCloseDocument={(id) => {
-        const doc = documents.find((d) => d.id === id)
-        if (doc?.isModified) setUnsavedDoc({ id, name: doc.name })
-        else closeDocument(id)
-      }}
-      onImportClick={() => {
-        if (documents.length >= MAX_TAB_LIMIT) setTabLimitModalOpen(true)
-        else mobileFileInputRef.current?.click()
-      }}
+      onCloseDocument={(id) => { const doc = documents.find((d) => d.id === id); if (doc?.isModified) setUnsavedDoc({ id, name: doc.name }); else closeDocument(id); }}
+      onImportClick={() => { if (documents.length >= MAX_TAB_LIMIT) setTabLimitModalOpen(true); else mobileFileInputRef.current?.click(); }}
     />
   )
 
@@ -165,12 +151,19 @@ export const App: React.FC = () => {
                 tool={selection.state.tool} paths={selection.state.paths} onCommitPath={selection.commitPath} onDeselect={selection.clearSelection}
               />
             ) : undefined}
-            isPrecisionToolActive={(activeCategory === 'orientation' && crop.isCropActive) || (activeCategory === 'selection' && selectionSubTab === 'vector')}
+            isPrecisionToolActive={(activeCategory === 'orientation' && crop.isCropActive) || (activeCategory === 'selection' && selectionSubTab === 'vector') || (activeCategory === 'retouch')}
             cropOverlay={activeDoc && activeCategory === 'orientation' && crop.isCropActive && crop.cropRect ? (scale) => (
               <CropOverlay
                 imageWidth={activeDoc.currentWidth} imageHeight={activeDoc.currentHeight}
                 cropRect={crop.cropRect!} aspectRatio={crop.aspectRatio} zoomScale={scale}
                 onChange={crop.updateCrop} onDragStateChange={crop.setIsDragging} onCancel={crop.cancelCrop}
+              />
+            ) : undefined}
+            retouchOverlay={activeDoc && activeCategory === 'retouch' ? (scale) => (
+              <RetouchOverlay
+                imageSrc={activeDoc.imageSrc} imageWidth={activeDoc.currentWidth} imageHeight={activeDoc.currentHeight} zoomScale={scale}
+                tool={retouch.tool} settings={retouch.settings} sourcePoint={retouch.sourcePoint} isAltPressed={retouch.isAltPressed}
+                onSetSourcePoint={retouch.setSourcePoint} onCommitTransform={handleApplyTransform} onDeselectSource={retouch.clearSourcePoint}
               />
             ) : undefined}
           />
@@ -195,6 +188,12 @@ export const App: React.FC = () => {
             onHoldCompareStart={() => setIsHoldComparing(true)} onHoldCompareEnd={() => setIsHoldComparing(false)}
             onApplyTransform={handleApplyTransform} onPreviewScaleChange={setPreviewScale}
             rotationAngle={rotationAngle} onRotateChange={setRotationAngle}
+            retouchProps={{
+              tool: retouch.tool, settings: retouch.settings, sourcePoint: retouch.sourcePoint,
+              onSelectTool: retouch.setTool, onChangeRadius: retouch.setRadius,
+              onChangeHardness: retouch.setHardness, onChangeOpacity: retouch.setOpacity,
+              onClearSourcePoint: retouch.clearSourcePoint,
+            }}
             selectionProps={{
               state: selection.state, onSelectTool: selection.setTool,
               onChangeFeather: selection.setFeather, onToggleInvert: selection.toggleInvert,

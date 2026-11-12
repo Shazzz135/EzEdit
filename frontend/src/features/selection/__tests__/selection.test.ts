@@ -129,18 +129,18 @@ describe('Milestone 6 - Issue 6.1: Vector Selection Geometry & Modes', () => {
     })
   })
 
-  describe('Standard Selection Keyboard Commands (Ctrl+C, Ctrl+X, Ctrl+I, Ctrl+D)', () => {
-    it('defines expected standard shortcut combinations', () => {
+  describe('Standard Selection Keyboard Commands (Ctrl+C, Ctrl+X, Ctrl+I, Esc/Ctrl+Shift+D)', () => {
+    it('defines expected standard shortcut combinations without browser bookmark conflict', () => {
       const shortcuts = {
         copy: 'Ctrl+C',
         cut: 'Ctrl+X',
         invert: 'Ctrl+I',
-        deselect: 'Ctrl+D',
+        deselect: 'Esc / Ctrl+Shift+D',
       }
       expect(shortcuts.copy).toBe('Ctrl+C')
       expect(shortcuts.cut).toBe('Ctrl+X')
       expect(shortcuts.invert).toBe('Ctrl+I')
-      expect(shortcuts.deselect).toBe('Ctrl+D')
+      expect(shortcuts.deselect).toBe('Esc / Ctrl+Shift+D')
     })
   })
 })
