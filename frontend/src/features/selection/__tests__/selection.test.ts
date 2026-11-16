@@ -1,11 +1,19 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   createRectPath,
   createEllipsePath,
   isPointInPolygon,
   getBoundingBox,
   combinePaths,
+  calculatePastePosition,
 } from '../selectionGeometry'
+import {
+  getInternalClipboardBlob,
+  setInternalClipboardBlob,
+  getInternalClipboardPosition,
+  hasPasteableContent,
+  pasteSelection,
+} from '../selectionOperations'
 import { type Point } from '@/types/selection'
 
 describe('Milestone 6 - Issue 6.1: Vector Selection Geometry & Modes', () => {
@@ -129,18 +137,66 @@ describe('Milestone 6 - Issue 6.1: Vector Selection Geometry & Modes', () => {
     })
   })
 
-  describe('Standard Selection Keyboard Commands (Ctrl+C, Ctrl+X, Ctrl+I, Esc/Ctrl+Shift+D)', () => {
+  describe('Standard Selection Keyboard Commands (Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+I, Esc/Ctrl+Shift+D)', () => {
     it('defines expected standard shortcut combinations without browser bookmark conflict', () => {
       const shortcuts = {
         copy: 'Ctrl+C',
         cut: 'Ctrl+X',
+        paste: 'Ctrl+V',
         invert: 'Ctrl+I',
         deselect: 'Esc / Ctrl+Shift+D',
       }
       expect(shortcuts.copy).toBe('Ctrl+C')
       expect(shortcuts.cut).toBe('Ctrl+X')
+      expect(shortcuts.paste).toBe('Ctrl+V')
       expect(shortcuts.invert).toBe('Ctrl+I')
       expect(shortcuts.deselect).toBe('Esc / Ctrl+Shift+D')
+    })
+  })
+
+  describe('Issue #47: Copy-Paste for Precision Tools', () => {
+    beforeEach(() => {
+      setInternalClipboardBlob(null, null)
+    })
+
+    describe('calculatePastePosition', () => {
+      it('centers pasted object when last position is not provided', () => {
+        const pos = calculatePastePosition(800, 600, 200, 100)
+        expect(pos.x).toBe(300)
+        expect(pos.y).toBe(250)
+      })
+
+      it('offsets by 20px when a prior position exists', () => {
+        const pos = calculatePastePosition(800, 600, 200, 100, { x: 50, y: 80 })
+        expect(pos.x).toBe(70)
+        expect(pos.y).toBe(100)
+      })
+
+      it('clamps position so pasted object does not overflow target canvas', () => {
+        const pos = calculatePastePosition(800, 600, 200, 100, { x: 700, y: 550 }, 50)
+        expect(pos.x).toBe(600)
+        expect(pos.y).toBe(500)
+      })
+    })
+
+    describe('Internal Clipboard State & Paste Execution', () => {
+      it('correctly tracks clipboard blob, position, and pasteable state', () => {
+        expect(hasPasteableContent()).toBe(false)
+        expect(getInternalClipboardBlob()).toBeNull()
+        expect(getInternalClipboardPosition()).toBeNull()
+
+        const mockBlob = new Blob(['mock-png'], { type: 'image/png' })
+        setInternalClipboardBlob(mockBlob, { x: 40, y: 60 })
+
+        expect(hasPasteableContent()).toBe(true)
+        expect(getInternalClipboardBlob()).toBe(mockBlob)
+        expect(getInternalClipboardPosition()).toEqual({ x: 40, y: 60 })
+      })
+
+      it('returns null from pasteSelection when clipboard is empty', async () => {
+        const result = await pasteSelection('data:image/png;base64,abc')
+        expect(result).toBeNull()
+      })
     })
   })
 })

@@ -7,15 +7,28 @@ import {
   defaultSelectionState,
 } from '@/types/selection'
 import { combinePaths } from './selectionGeometry'
+import { hasPasteableContent } from './selectionOperations'
 
 export interface SelectionActions {
   onCopy?: () => void
   onCut?: () => void
+  onPaste?: () => void
 }
 
 export function useSelectionState(isSelectionActive = true, actions?: SelectionActions) {
   const [state, setState] = useState<SelectionState>(defaultSelectionState)
+  const [canPaste, setCanPaste] = useState<boolean>(() => hasPasteableContent())
   const actionsRef = useRef<SelectionActions | undefined>(actions)
+
+  const refreshCanPaste = useCallback(() => {
+    setCanPaste(hasPasteableContent())
+  }, [])
+
+  useEffect(() => {
+    const handleFocus = () => refreshCanPaste()
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [refreshCanPaste])
 
   useEffect(() => {
     actionsRef.current = actions
@@ -104,6 +117,15 @@ export function useSelectionState(isSelectionActive = true, actions?: SelectionA
         }
         return
       }
+
+      // Ctrl+V: Paste object onto canvas
+      if (isModifier && (e.key === 'v' || e.key === 'V')) {
+        if (actionsRef.current?.onPaste) {
+          e.preventDefault()
+          actionsRef.current.onPaste()
+        }
+        return
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -112,6 +134,8 @@ export function useSelectionState(isSelectionActive = true, actions?: SelectionA
 
   return {
     state,
+    canPaste,
+    refreshCanPaste,
     setTool,
     setMode,
     setFeather,
