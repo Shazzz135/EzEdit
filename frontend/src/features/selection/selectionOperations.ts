@@ -8,6 +8,7 @@ export interface CutResult {
   newImageUrl: string
   width: number
   height: number
+  bbox?: { minX: number; minY: number; width: number; height: number } | null
 }
 
 export interface PasteResult {
@@ -124,6 +125,7 @@ export async function cutSelection(
       ctx.fill(buildPath2D(paths))
       ctx.restore()
 
+      const bbox = getBoundingBox(paths)
       canvas.toBlob((newBlob) => {
         if (!newBlob) return resolve(null)
         resolve({
@@ -133,6 +135,7 @@ export async function cutSelection(
           newImageUrl: URL.createObjectURL(newBlob),
           width: canvas.width,
           height: canvas.height,
+          bbox: bbox ? { minX: bbox.minX, minY: bbox.minY, width: bbox.width, height: bbox.height } : null,
         })
       }, 'image/png')
     }

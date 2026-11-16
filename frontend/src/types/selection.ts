@@ -3,12 +3,23 @@ export type SelectionToolType =
   | 'ellipse-marquee'
   | 'lasso'
   | 'poly-lasso'
+  | 'select-move'
 
 export type SelectionMode = 'new' | 'add' | 'subtract'
 
 export interface Point {
   x: number
   y: number
+}
+
+export interface FloatingObject {
+  id: string
+  imageSrc: string
+  blob: Blob
+  x: number
+  y: number
+  width: number
+  height: number
 }
 
 export interface SelectionState {
@@ -18,6 +29,7 @@ export interface SelectionState {
   paths: Point[][]      // array of closed polygon loops
   inverted: boolean
   hasSelection: boolean
+  floatingObject?: FloatingObject | null
 }
 
 export const defaultSelectionState: SelectionState = {
@@ -27,4 +39,5 @@ export const defaultSelectionState: SelectionState = {
   paths: [],
   inverted: false,
   hasSelection: false,
+  floatingObject: null,
 }

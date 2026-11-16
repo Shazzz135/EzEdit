@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import {
   type DocumentState, type AdjustmentValues, type OrientationValues, type FilterState,
-  defaultAdjustments, defaultOrientation, defaultFilterState, MAX_TAB_LIMIT,
+  type HistoryActionType, defaultAdjustments, defaultOrientation, defaultFilterState, MAX_TAB_LIMIT,
 } from '@/types/document'
 import { type TransferEditCategories, pushOrReplaceHistory, lastStateOp } from './documentHistoryHelper'
 
@@ -14,9 +14,10 @@ export interface DocumentStore {
   updateAdjustments: (id: string, partial: Partial<AdjustmentValues>) => void; resetAdjustments: (id: string) => void
   updateOrientation: (id: string, partial: Partial<OrientationValues>) => void
   updateFilter: (id: string, partial: Partial<FilterState>) => void; resetFilter: (id: string) => void
-  applyRasterTransform: (id: string, newImage: { url: string; blob: Blob; width: number; height: number }) => void
+  applyRasterTransform: (id: string, newImage: { url: string; blob: Blob; width: number; height: number }, meta?: { actionType?: HistoryActionType; description?: string }) => void
   resetDocumentCompletely: (id: string) => void; markDocumentExported: (id: string) => void
   transferEdits: (sourceId: string, targetIds: string[], categories: TransferEditCategories) => void
+  jumpToHistoryIndex: (id: string, index: number) => void
   undo: (id: string) => void; redo: (id: string) => void
   setHydratedDocuments: (docs: DocumentState[], activeId: string | null) => void; clearAllDocuments: () => void
 }
@@ -40,6 +41,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     const initialEntry = {
       imageSrc: origSrc, imageBlob: origBlob, width: docData.originalWidth, height: docData.originalHeight,
       adjustments: { ...defaultAdjustments }, orientation: { ...defaultOrientation }, filter: { ...defaultFilterState },
+      actionType: 'init' as const, description: 'Open Image', timestamp: Date.now(),
     }
     const newDoc: DocumentState = {
       ...docData, id: newId, originalImageSrc: origSrc, originalImageBlob: origBlob, resetVersion: 0, isModified: false,
@@ -84,7 +86,9 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     documents: state.documents.map((d) => {
       if (d.id !== id) return d
       const nextAdj = { ...d.adjustments, ...partial }
-      const h = pushOrReplaceHistory(d, { adjustments: nextAdj, orientation: d.orientation, filter: d.filter }, `adj_${Object.keys(partial).sort().join(',')}`)
+      const keys = Object.keys(partial)
+      const desc = keys.length === 1 ? `Adjust ${keys[0].charAt(0).toUpperCase() + keys[0].slice(1)}` : 'Adjust Values'
+      const h = pushOrReplaceHistory(d, { adjustments: nextAdj, orientation: d.orientation, filter: d.filter }, `adj_${keys.sort().join(',')}`, { actionType: 'adjustment', description: desc })
       return { ...d, adjustments: nextAdj, ...h, isModified: true, updatedAt: Date.now() }
     }),
   })),
@@ -93,7 +97,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     documents: state.documents.map((d) => {
       if (d.id !== id) return d
       const nextAdj = { ...defaultAdjustments }
-      const h = pushOrReplaceHistory(d, { adjustments: nextAdj, orientation: d.orientation, filter: d.filter })
+      const h = pushOrReplaceHistory(d, { adjustments: nextAdj, orientation: d.orientation, filter: d.filter }, undefined, { actionType: 'adjustment', description: 'Reset Adjustments' })
       return { ...d, adjustments: nextAdj, ...h, isModified: true, updatedAt: Date.now() }
     }),
   })),
@@ -103,7 +107,11 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       if (d.id !== id) return d
       const nextOri = { ...d.orientation, ...partial }
       const isContinuous = 'rotation' in partial && !('flipH' in partial) && !('flipV' in partial)
-      const h = pushOrReplaceHistory(d, { adjustments: d.adjustments, orientation: nextOri, filter: d.filter }, isContinuous ? 'orient_rot' : undefined)
+      let desc = 'Transform Orientation'
+      if ('rotation' in partial) desc = `Rotate ${partial.rotation}°`
+      else if ('flipH' in partial) desc = partial.flipH ? 'Flip Horizontal' : 'Reset Flip H'
+      else if ('flipV' in partial) desc = partial.flipV ? 'Flip Vertical' : 'Reset Flip V'
+      const h = pushOrReplaceHistory(d, { adjustments: d.adjustments, orientation: nextOri, filter: d.filter }, isContinuous ? 'orient_rot' : undefined, { actionType: 'orientation', description: desc })
       return { ...d, orientation: nextOri, ...h, isModified: true, updatedAt: Date.now() }
     }),
   })),
@@ -113,7 +121,8 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       if (d.id !== id) return d
       const nextFlt = { ...d.filter, ...partial }
       const isSliderOnly = 'intensity' in partial && !('preset' in partial)
-      const h = pushOrReplaceHistory(d, { adjustments: d.adjustments, orientation: d.orientation, filter: nextFlt }, isSliderOnly ? 'flt_int' : undefined)
+      const desc = partial.preset && partial.preset !== 'none' ? `Filter: ${partial.preset}` : (partial.intensity !== undefined ? `Filter Intensity ${partial.intensity}%` : 'Filter')
+      const h = pushOrReplaceHistory(d, { adjustments: d.adjustments, orientation: d.orientation, filter: nextFlt }, isSliderOnly ? 'flt_int' : undefined, { actionType: 'filter', description: desc })
       return { ...d, filter: nextFlt, ...h, isModified: true, updatedAt: Date.now() }
     }),
   })),
@@ -122,12 +131,12 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     documents: state.documents.map((d) => {
       if (d.id !== id) return d
       const nextFlt = { ...defaultFilterState }
-      const h = pushOrReplaceHistory(d, { adjustments: d.adjustments, orientation: d.orientation, filter: nextFlt })
+      const h = pushOrReplaceHistory(d, { adjustments: d.adjustments, orientation: d.orientation, filter: nextFlt }, undefined, { actionType: 'filter', description: 'Reset Filter' })
       return { ...d, filter: nextFlt, ...h, isModified: true, updatedAt: Date.now() }
     }),
   })),
 
-  applyRasterTransform: (id, newImage) => set((state) => ({
+  applyRasterTransform: (id, newImage, meta) => set((state) => ({
     documents: state.documents.map((doc) => {
       if (doc.id !== id) return doc
       delete lastStateOp[id]
@@ -135,6 +144,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       const nextEntry = {
         imageSrc: newImage.url, imageBlob: newImage.blob, width: newImage.width, height: newImage.height,
         adjustments: { ...doc.adjustments }, orientation: { ...doc.orientation }, filter: { ...doc.filter },
+        actionType: meta?.actionType ?? 'transform', description: meta?.description ?? 'Applied Transformation', timestamp: Date.now(),
       }
       return {
         ...doc, imageSrc: newImage.url, imageBlob: newImage.blob, currentWidth: newImage.width, currentHeight: newImage.height,
@@ -155,6 +165,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       const resetEntry = {
         imageSrc: origSrc, imageBlob: origBlob, width: origW, height: origH,
         adjustments: { ...defaultAdjustments }, orientation: { ...defaultOrientation }, filter: { ...defaultFilterState },
+        actionType: 'init' as const, description: 'Reset to Original', timestamp: Date.now(),
       }
       return {
         ...doc, originalImageSrc: origSrc, originalImageBlob: origBlob, imageSrc: origSrc, imageBlob: origBlob,
@@ -175,7 +186,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         delete lastStateOp[doc.id]
         const nextAdjustments = categories.adjustments ? { ...sourceDoc.adjustments } : { ...doc.adjustments }
         const nextFilter = categories.filter ? { ...sourceDoc.filter } : { ...doc.filter }
-        const h = pushOrReplaceHistory(doc, { adjustments: nextAdjustments, orientation: doc.orientation, filter: nextFilter })
+        const h = pushOrReplaceHistory(doc, { adjustments: nextAdjustments, orientation: doc.orientation, filter: nextFilter }, undefined, { actionType: 'adjustment', description: 'Transferred Edits' })
         return { ...doc, adjustments: nextAdjustments, filter: nextFilter, ...h, isModified: true, resetVersion: (doc.resetVersion ?? 0) + 1, updatedAt: Date.now() }
       }),
     }))
@@ -185,33 +196,21 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     documents: state.documents.map((d) => d.id === id ? { ...d, isModified: false, updatedAt: Date.now() } : d),
   })),
 
-  undo: (id) => set((state) => ({
+  jumpToHistoryIndex: (id, targetIndex) => set((state) => ({
     documents: state.documents.map((doc) => {
-      if (doc.id !== id || !doc.history || doc.historyIndex <= 0) return doc
+      if (doc.id !== id || !doc.history || targetIndex < 0 || targetIndex >= doc.history.length) return doc
       delete lastStateOp[id]
-      const nextIndex = doc.historyIndex - 1
-      const entry = doc.history[nextIndex]
+      const entry = doc.history[targetIndex]
       return {
         ...doc, imageSrc: entry.imageSrc, imageBlob: entry.imageBlob, currentWidth: entry.width, currentHeight: entry.height,
         adjustments: { ...entry.adjustments }, orientation: { ...entry.orientation }, filter: { ...entry.filter },
-        resetVersion: (doc.resetVersion ?? 0) + 1, historyIndex: nextIndex, updatedAt: Date.now(),
+        resetVersion: (doc.resetVersion ?? 0) + 1, historyIndex: targetIndex, updatedAt: Date.now(),
       }
     }),
   })),
 
-  redo: (id) => set((state) => ({
-    documents: state.documents.map((doc) => {
-      if (doc.id !== id || !doc.history || doc.historyIndex >= doc.history.length - 1) return doc
-      delete lastStateOp[id]
-      const nextIndex = doc.historyIndex + 1
-      const entry = doc.history[nextIndex]
-      return {
-        ...doc, imageSrc: entry.imageSrc, imageBlob: entry.imageBlob, currentWidth: entry.width, currentHeight: entry.height,
-        adjustments: { ...entry.adjustments }, orientation: { ...entry.orientation }, filter: { ...entry.filter },
-        resetVersion: (doc.resetVersion ?? 0) + 1, historyIndex: nextIndex, updatedAt: Date.now(),
-      }
-    }),
-  })),
+  undo: (id) => { const doc = get().documents.find((d) => d.id === id); if (doc && doc.historyIndex > 0) get().jumpToHistoryIndex(id, doc.historyIndex - 1) },
+  redo: (id) => { const doc = get().documents.find((d) => d.id === id); if (doc && doc.history && doc.historyIndex < doc.history.length - 1) get().jumpToHistoryIndex(id, doc.historyIndex + 1) },
 
   setHydratedDocuments: (docs, activeId) => {
     const formatted = docs.map((doc) => {
@@ -224,6 +223,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         history: doc.history?.length ? doc.history : [{
           imageSrc: origSrc, imageBlob: origBlob, width: doc.originalWidth || doc.currentWidth, height: doc.originalHeight || doc.currentHeight,
           adjustments: { ...defaultAdjustments }, orientation: { ...defaultOrientation }, filter: { ...defaultFilterState },
+          actionType: 'init' as const, description: 'Open Image', timestamp: Date.now(),
         }],
         historyIndex: doc.historyIndex ?? 0,
       }

@@ -6,20 +6,24 @@ export interface WorkspaceShellProps {
   headerProps?: HeaderProps
   canvasContent?: React.ReactNode
   toolsContent?: React.ReactNode
+  historyContent?: React.ReactNode
   tabBarContent?: React.ReactNode
   defaultToolsWidth?: number
   minToolsWidth?: number
   maxToolsWidth?: number
+  showHistory?: boolean
 }
 
 export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
   headerProps = {},
   canvasContent,
   toolsContent,
+  historyContent,
   tabBarContent,
   defaultToolsWidth = 320,
   minToolsWidth = 260,
   maxToolsWidth = 520,
+  showHistory = true,
 }) => {
   const [toolsWidth, setToolsWidth] = useState(defaultToolsWidth)
   const [isDragging, setIsDragging] = useState(false)
@@ -70,6 +74,16 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
 
       {/* 2. Main Workspace Partition (Full editor workspace without ads) */}
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        {/* Left History Panel - visible only on desktop/windows (hidden on mobile) */}
+        {showHistory && historyContent && (
+          <aside
+            aria-label="Document History"
+            className="hidden md:flex w-64 min-w-[220px] max-w-[280px] h-full bg-[#131318] border-r border-[#22222C] flex-col overflow-hidden flex-shrink-0 z-10"
+          >
+            {historyContent}
+          </aside>
+        )}
+
         {/* A. Canvas Editor Viewport Area (Full-bleed on Desktop, Top on Mobile) */}
         <section
           aria-label="Photo Canvas Viewport"

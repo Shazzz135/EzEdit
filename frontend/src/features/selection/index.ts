@@ -1,5 +1,7 @@
 export * from './selectionGeometry'
 export * from './selectionOperations'
+export * from './floatingObjectOperations'
 export * from './useSelectionState'
 export * from './SelectionOverlay'
+export * from './FloatingObjectOverlay'
 export * from './SelectionPanel'

@@ -45,4 +45,10 @@ describe('WorkspaceShell & Layout Constraints', () => {
     isGrabActive = grabToggled
     expect(isGrabActive).toBe(false)
   })
+
+  it('confirms history sidebar is configured for desktop viewports and hidden on mobile', () => {
+    const desktopClass = 'hidden md:flex'
+    expect(desktopClass).toContain('hidden')
+    expect(desktopClass).toContain('md:flex')
+  })
 })

@@ -1,7 +1,7 @@
 import React from 'react'
 import {
   Undo2, Redo2, RotateCcw, ArrowRightLeft, ZoomIn, ZoomOut,
-  SplitSquareVertical, Download, FolderDown, Sparkles, Layers, Hand,
+  SplitSquareVertical, Download, FolderDown, Sparkles, Layers, Hand, History,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -11,14 +11,16 @@ export interface HeaderProps {
   onZoomIn?: () => void; onZoomOut?: () => void; onToggleCompare?: () => void; onToggleGrab?: () => void
   isGrabActive?: boolean; onExport?: () => void; onExportAll?: () => void; onOpenAI?: () => void
   canUndo?: boolean; canRedo?: boolean; canMassReset?: boolean; canTransferEdits?: boolean
-  canExportAll?: boolean; isComparing?: boolean; children?: React.ReactNode; mobileSelector?: React.ReactNode
+  canExportAll?: boolean; isComparing?: boolean; isHistoryOpen?: boolean; onToggleHistory?: () => void
+  children?: React.ReactNode; mobileSelector?: React.ReactNode
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onUndo, onRedo, onMassReset, onOpenTransferEdits, onZoomIn, onZoomOut,
   onToggleCompare, onToggleGrab, isGrabActive = false, onExport, onExportAll, onOpenAI,
   canUndo = false, canRedo = false, canMassReset = false, canTransferEdits = false,
-  canExportAll = false, isComparing = false, children, mobileSelector,
+  canExportAll = false, isComparing = false, isHistoryOpen = false, onToggleHistory,
+  children, mobileSelector,
 }) => {
   return (
     <header className="h-11 min-h-[44px] bg-[#16161C] border-b border-[#242430] flex items-center justify-between px-2 sm:px-3 gap-1.5 select-none z-20">
@@ -80,14 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Hand className="w-3.5 h-3.5" />
         </Button>
-        <Button
-          variant="icon"
-          size="icon"
-          onClick={onOpenAI}
-          aria-label="AI Tools"
-          title="AI Tools"
-          className="text-[#60A5FA] hover:text-[#93C5FD]"
-        >
+        <Button variant="icon" size="icon" onClick={onOpenAI} aria-label="AI Tools" title="AI Tools" className="text-[#60A5FA] hover:text-[#93C5FD]">
           <Sparkles className="w-3.5 h-3.5" />
         </Button>
         <Button
@@ -126,6 +121,17 @@ export const Header: React.FC<HeaderProps> = ({
             <Redo2 className="w-3.5 h-3.5" />
           </Button>
         </Tooltip>
+
+        {onToggleHistory && (
+          <Tooltip content={isHistoryOpen ? 'Hide History Panel' : 'Show History Panel'}>
+            <Button
+              variant="icon" size="icon" isActive={isHistoryOpen} onClick={onToggleHistory} aria-label="Toggle History Panel"
+              className={isHistoryOpen ? 'text-[#60A5FA] bg-[#222234]' : 'text-[#808094] hover:text-[#D0D0DC]'}
+            >
+              <History className="w-3.5 h-3.5" />
+            </Button>
+          </Tooltip>
+        )}
 
         <Tooltip content="Reset Image Completely (All Tools)">
           <Button
