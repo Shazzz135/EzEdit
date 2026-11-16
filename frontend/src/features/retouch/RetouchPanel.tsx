@@ -1,7 +1,8 @@
 import React from 'react'
-import { Stamp, Sparkles, Target, Eraser, RotateCcw, Info, Loader2 } from 'lucide-react'
+import { Stamp, Sparkles, Target, Eraser, RotateCcw, Info, Loader2, Clock } from 'lucide-react'
 import { type RetouchTool, type RetouchSettings, type InpaintingMethod, type Point } from './types'
 import { PrecisionSlider } from '@/components/ui/PrecisionSlider'
+import { useAIRateLimiter } from '@/features/ai'
 
 export interface RetouchPanelProps {
   tool: RetouchTool
@@ -27,6 +28,7 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
   onChangeInpaintPrompt, onClearSourcePoint, onClearMask, onExecuteInpaint,
 }) => {
   const isRemoveMode = tool === 'object-remove'
+  const { cooldownSeconds } = useAIRateLimiter()
 
   return (
     <div className="flex flex-col gap-4 p-4 bg-[#12121A] text-[#F4F4F6] select-none text-xs">
@@ -185,7 +187,7 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
 
         <button
           type="button"
-          disabled={!hasMask || isProcessingInpaint}
+          disabled={!hasMask || isProcessingInpaint || cooldownSeconds > 0}
           onClick={onExecuteInpaint}
           className="w-full py-2 px-3 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
         >
@@ -193,6 +195,11 @@ export const RetouchPanel: React.FC<RetouchPanelProps> = ({
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               <span>Removing Object ({Math.round(inpaintProgress * 100)}%)...</span>
+            </>
+          ) : cooldownSeconds > 0 ? (
+            <>
+              <Clock className="w-3.5 h-3.5 text-[#F59E0B]" />
+              <span>Cooldown ({cooldownSeconds}s)</span>
             </>
           ) : (
             <>

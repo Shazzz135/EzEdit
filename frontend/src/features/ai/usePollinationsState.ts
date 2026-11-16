@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   MAX_PROMPT_LENGTH,
   type AIMode,
@@ -7,6 +7,8 @@ import {
   type AIGeneratedResult,
 } from './types'
 import { generatePollinationsImage, generateRandomSeed } from './pollinationsService'
+import { aiRateLimiter, AIRateLimitError } from './rateLimiter'
+import { useAIRateLimiter } from './useAIRateLimiter'
 
 export interface ActiveImageSource {
   imageSrc: string
@@ -24,6 +26,14 @@ export const usePollinationsState = () => {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [previewResult, setPreviewResult] = useState<AIGeneratedResult | null>(null)
+
+  const { isRateLimited, cooldownSeconds, cancelActiveRequest, clearCooldown } = useAIRateLimiter()
+
+  useEffect(() => {
+    return () => {
+      aiRateLimiter.cancelInFlight()
+    }
+  }, [])
 
   const setPrompt = useCallback((next: string) => {
     setPromptState(next.slice(0, MAX_PROMPT_LENGTH))
@@ -54,9 +64,21 @@ export const usePollinationsState = () => {
 
   const handleGenerate = useCallback(
     async (overrideSeed?: number, activeSource?: ActiveImageSource) => {
+      const status = aiRateLimiter.getStatus()
+      if (!status.allowed) {
+        if (status.reason === 'cooldown') {
+          setError(`Rate limit cooldown active. Please wait ${status.remainingSeconds}s before retrying.`)
+        } else {
+          setError('An AI request is already in progress. Please wait for it to complete.')
+        }
+        return
+      }
+
       const activeSeed = overrideSeed ?? seed
       setError(null)
       setIsGenerating(true)
+      const controller = new AbortController()
+      aiRateLimiter.recordRequestStart(controller)
 
       try {
         const result = await generatePollinationsImage({
@@ -69,7 +91,9 @@ export const usePollinationsState = () => {
           sourceImageSrc: activeSource?.imageSrc,
           sourceWidth: activeSource?.width,
           sourceHeight: activeSource?.height,
+          signal: controller.signal,
         })
+        aiRateLimiter.recordRequestSuccess()
         setPreviewResult((prev) => {
           if (prev && prev.url.startsWith('blob:')) {
             URL.revokeObjectURL(prev.url)
@@ -77,7 +101,13 @@ export const usePollinationsState = () => {
           return result
         })
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to generate image from Pollinations.ai.')
+        if (err instanceof AIRateLimitError) {
+          aiRateLimiter.recordRequestRateLimited(err.retryAfterSeconds)
+          setError(err.message)
+        } else {
+          aiRateLimiter.recordRequestError()
+          setError(err instanceof Error ? err.message : 'Failed to generate image from Pollinations.ai.')
+        }
       } finally {
         setIsGenerating(false)
       }
@@ -102,6 +132,8 @@ export const usePollinationsState = () => {
     seed,
     enhance,
     isGenerating,
+    isRateLimited,
+    cooldownSeconds,
     error,
     previewResult,
     setMode,
@@ -116,5 +148,7 @@ export const usePollinationsState = () => {
     consumePreview,
     handleGenerate,
     handleRegenerateWithNewSeed,
+    cancelActiveRequest,
+    clearCooldown,
   }
 }
