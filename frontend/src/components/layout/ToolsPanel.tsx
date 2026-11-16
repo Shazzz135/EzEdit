@@ -201,6 +201,8 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
             enhance={ai.enhance}
             isGenerating={ai.isGenerating}
             error={ai.error}
+            cooldownSeconds={ai.cooldownSeconds}
+            onCancelGenerate={ai.cancelActiveRequest}
             onChangeMode={ai.setMode}
             onChangePrompt={ai.setPrompt}
             onChangeAspectRatio={ai.setAspectRatio}
@@ -209,10 +211,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
             onRandomizeSeed={ai.randomizeSeed}
             onToggleEnhance={() => ai.setEnhance((v) => !v)}
             onGenerate={() =>
-              ai.handleGenerate(
-                undefined,
-                activeDoc ? { imageSrc: activeDoc.imageSrc, width: activeDoc.currentWidth, height: activeDoc.currentHeight } : undefined
-              )
+              ai.handleGenerate(undefined, activeDoc ? { imageSrc: activeDoc.imageSrc, width: activeDoc.currentWidth, height: activeDoc.currentHeight } : undefined)
             }
           />
         )}

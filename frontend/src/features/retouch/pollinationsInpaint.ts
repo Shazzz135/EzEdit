@@ -1,5 +1,6 @@
-import { getPollinationsApiKey } from '@/features/ai/pollinationsService'
+import { getPollinationsApiKey, parseRetryAfter } from '@/features/ai/pollinationsService'
 import { computeEditDimensions, base64ToBlob } from '@/features/ai/pollinationsEditUtils'
+import { aiRateLimiter } from '@/features/ai/rateLimiter'
 
 export interface PollinationsInpaintOptions {
   prompt?: string
@@ -12,6 +13,12 @@ export async function executePollinationsInpainting(
   imageSrc: string,
   options: PollinationsInpaintOptions
 ): Promise<Blob | null> {
+  const status = aiRateLimiter.getStatus()
+  if (!status.allowed) {
+    console.warn(`AI inpainting throttled (${status.reason}): wait ${status.remainingSeconds}s`)
+    return null
+  }
+
   const userPrompt = options.prompt?.trim()
   const promptText = userPrompt
     ? `Inpaint and seamlessly replace the masked region with ${userPrompt}, matching surrounding photo lighting, colors, and perspective`
@@ -22,6 +29,7 @@ export async function executePollinationsInpainting(
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30000)
+  aiRateLimiter.recordRequestStart(controller)
 
   try {
     const endpoint = key
@@ -44,18 +52,37 @@ export async function executePollinationsInpainting(
       }),
     })
     clearTimeout(timeout)
-    if (!res.ok) return null
+
+    if (res.status === 429) {
+      const waitSec = parseRetryAfter(res, 15)
+      aiRateLimiter.recordRequestRateLimited(waitSec)
+      return null
+    }
+
+    if (!res.ok) {
+      aiRateLimiter.recordRequestError()
+      return null
+    }
 
     const contentType = res.headers.get('content-type') || ''
+    let resultBlob: Blob | null = null
     if (contentType.includes('application/json')) {
       const json = (await res.json()) as { data?: Array<{ b64_json?: string }> }
       const b64 = json.data?.[0]?.b64_json
-      if (!b64) return null
-      return base64ToBlob(b64, 'image/jpeg')
+      resultBlob = b64 ? base64ToBlob(b64, 'image/jpeg') : null
+    } else {
+      resultBlob = await res.blob()
     }
-    return await res.blob()
+
+    if (resultBlob) {
+      aiRateLimiter.recordRequestSuccess()
+    } else {
+      aiRateLimiter.recordRequestError()
+    }
+    return resultBlob
   } catch (err) {
     clearTimeout(timeout)
+    aiRateLimiter.recordRequestError()
     console.warn('Pollinations.ai inpainting request failed:', err)
     return null
   }

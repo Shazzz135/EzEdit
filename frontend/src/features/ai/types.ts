@@ -24,6 +24,7 @@ export interface AIGenerateRequest {
   sourceImageSrc?: string
   sourceWidth?: number
   sourceHeight?: number
+  signal?: AbortSignal
 }
 
 export interface AIGeneratedResult {
