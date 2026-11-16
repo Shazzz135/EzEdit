@@ -67,6 +67,19 @@ export const defaultFilterState: FilterState = {
   intensity: 100,
 }
 
+export type HistoryActionType =
+  | 'init'
+  | 'adjustment'
+  | 'filter'
+  | 'orientation'
+  | 'crop'
+  | 'retouch'
+  | 'annotate'
+  | 'ai'
+  | 'cutout'
+  | 'paste'
+  | 'transform'
+
 export interface DocumentHistoryEntry {
   imageSrc: string
   imageBlob?: Blob
@@ -75,6 +88,9 @@ export interface DocumentHistoryEntry {
   adjustments: AdjustmentValues
   orientation: OrientationValues
   filter: FilterState
+  actionType?: HistoryActionType
+  description?: string
+  timestamp?: number
 }
 
 export interface DocumentState {

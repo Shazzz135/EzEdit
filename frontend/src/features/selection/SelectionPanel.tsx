@@ -10,6 +10,8 @@ import {
   ClipboardPaste,
   FlipHorizontal,
   X,
+  Move,
+  Check,
 } from 'lucide-react'
 import { PrecisionSlider } from '@/components/ui/PrecisionSlider'
 import {
@@ -26,6 +28,8 @@ export interface SelectionPanelProps {
   onCopySelection: () => void
   onCutSelection: () => void
   onPasteSelection?: () => void
+  onCommitFloating?: () => void
+  onDiscardFloating?: () => void
   canPaste?: boolean
 }
 
@@ -34,6 +38,7 @@ const TOOLS: { id: SelectionToolType; label: string; icon: React.FC<{ className?
   { id: 'ellipse-marquee', label: 'Ellipse', icon: Circle },
   { id: 'lasso', label: 'Lasso', icon: Lasso },
   { id: 'poly-lasso', label: 'Poly Lasso', icon: Pentagon },
+  { id: 'select-move', label: 'Select / Move', icon: Move },
 ]
 
 export const SelectionPanel: React.FC<SelectionPanelProps> = ({
@@ -45,6 +50,8 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
   onCopySelection,
   onCutSelection,
   onPasteSelection,
+  onCommitFloating,
+  onDiscardFloating,
   canPaste = false,
 }) => {
   return (
@@ -68,17 +75,52 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
         </button>
       </div>
 
+      {/* Movable Floating Object Banner */}
+      {state.floatingObject && (
+        <div className="flex flex-col gap-2 p-2.5 rounded-lg border border-[#2563EB]/40 bg-[#1E293B]/60">
+          <div className="flex items-center justify-between text-xs text-[#93C5FD]">
+            <span className="font-semibold flex items-center gap-1.5">
+              <Move className="w-3.5 h-3.5" /> Movable Object Active
+            </span>
+            <span className="font-mono text-[10px] text-[#94A3B8]">
+              {state.floatingObject.width}x{state.floatingObject.height}px
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+            <button
+              type="button"
+              onClick={onCommitFloating}
+              className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-xs font-medium text-white transition-colors cursor-pointer"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Stamp</span>
+            </button>
+            <button
+              type="button"
+              onClick={onDiscardFloating}
+              className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg border border-[#374151] hover:bg-[#1F2937] text-xs font-medium text-[#D1D5DB] transition-colors cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Discard</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tool Selector Grid */}
       <div className="grid grid-cols-2 gap-2">
-        {TOOLS.map((t) => {
+        {TOOLS.map((t, index) => {
           const Icon = t.icon
           const isSelected = state.tool === t.id
+          const isLast = index === TOOLS.length - 1 && TOOLS.length % 2 === 1
           return (
             <button
               key={t.id}
               type="button"
               onClick={() => onSelectTool(t.id)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                isLast ? 'col-span-2 justify-center' : ''
+              } ${
                 isSelected
                   ? 'border-[#60A5FA] bg-[#1E1E2C] text-[#F4F4F6]'
                   : 'border-[#262636] bg-[#161622]/60 hover:bg-[#1A1A28] text-[#A0A0B2]'
@@ -91,7 +133,6 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
         })}
       </div>
 
-      {/* Bold Separator */}
       <div className="h-[2px] bg-[#323246] w-full rounded-full my-0.5" />
 
       {/* Feather Radius Slider */}
@@ -108,7 +149,6 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
         />
       </div>
 
-      {/* Bold Separator */}
       <div className="h-[2px] bg-[#323246] w-full rounded-full my-0.5" />
 
       {/* Selection Operations */}
