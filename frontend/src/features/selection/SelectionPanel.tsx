@@ -7,6 +7,7 @@ import {
   RotateCcw,
   Scissors,
   Copy,
+  ClipboardPaste,
   FlipHorizontal,
   X,
 } from 'lucide-react'
@@ -24,6 +25,8 @@ export interface SelectionPanelProps {
   onClearSelection: () => void
   onCopySelection: () => void
   onCutSelection: () => void
+  onPasteSelection?: () => void
+  canPaste?: boolean
 }
 
 const TOOLS: { id: SelectionToolType; label: string; icon: React.FC<{ className?: string }> }[] = [
@@ -41,6 +44,8 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
   onClearSelection,
   onCopySelection,
   onCutSelection,
+  onPasteSelection,
+  canPaste = false,
 }) => {
   return (
     <div className="flex flex-col gap-3 pb-4 select-none">
@@ -108,13 +113,13 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
 
       {/* Selection Operations */}
       <div className="flex flex-col gap-2">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           <button
             type="button"
             onClick={onCopySelection}
             disabled={!state.hasSelection}
             title="Copy selection to clipboard (Ctrl+C)"
-            className="flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg border border-[#28283A] bg-[#161622]/60 hover:bg-[#1A1A28] text-xs font-medium text-[#F4F4F6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg border border-[#28283A] bg-[#161622]/60 hover:bg-[#1A1A28] text-xs font-medium text-[#F4F4F6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             <Copy className="w-3.5 h-3.5 text-[#60A5FA]" />
             <span>Copy</span>
@@ -124,10 +129,20 @@ export const SelectionPanel: React.FC<SelectionPanelProps> = ({
             onClick={onCutSelection}
             disabled={!state.hasSelection}
             title="Cut selection from document (Ctrl+X)"
-            className="flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg border border-[#28283A] bg-[#161622]/60 hover:bg-[#1A1A28] text-xs font-medium text-[#F4F4F6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg border border-[#28283A] bg-[#161622]/60 hover:bg-[#1A1A28] text-xs font-medium text-[#F4F4F6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             <Scissors className="w-3.5 h-3.5 text-[#60A5FA]" />
             <span>Cut</span>
+          </button>
+          <button
+            type="button"
+            onClick={onPasteSelection}
+            disabled={!canPaste}
+            title="Paste copied object (Ctrl+V)"
+            className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg border border-[#28283A] bg-[#161622]/60 hover:bg-[#1A1A28] text-xs font-medium text-[#F4F4F6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          >
+            <ClipboardPaste className="w-3.5 h-3.5 text-[#60A5FA]" />
+            <span>Paste</span>
           </button>
         </div>
 

@@ -130,3 +130,26 @@ export function combinePaths(
 
   return existing
 }
+
+export function calculatePastePosition(
+  targetWidth: number,
+  targetHeight: number,
+  pastedWidth: number,
+  pastedHeight: number,
+  lastPosition?: { x: number; y: number } | null,
+  offset = 20
+): { x: number; y: number } {
+  if (lastPosition && typeof lastPosition.x === 'number' && typeof lastPosition.y === 'number') {
+    const maxX = Math.max(0, targetWidth - Math.min(pastedWidth, targetWidth))
+    const maxY = Math.max(0, targetHeight - Math.min(pastedHeight, targetHeight))
+    return {
+      x: Math.min(Math.max(0, lastPosition.x + offset), maxX),
+      y: Math.min(Math.max(0, lastPosition.y + offset), maxY),
+    }
+  }
+
+  return {
+    x: Math.max(0, Math.round((targetWidth - pastedWidth) / 2)),
+    y: Math.max(0, Math.round((targetHeight - pastedHeight) / 2)),
+  }
+}
